@@ -9,17 +9,18 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAnnouncementController = void 0;
-const student_1 = require("../services/student");
-const getAnnouncementController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+exports.addSubject = void 0;
+const studentClass_1 = require("../models/classModel/studentClass");
+const addSubject = (subjectCode, subjectDescription) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const studentID = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userID;
-        const result = yield (0, student_1.getAnnouncement)(studentID);
-        return res.status(result.httpCode).json({ 'message': result.message });
+        const subject = yield new studentClass_1.Subject({
+            subjectCode,
+            subjectDescription,
+        }).save();
+        return { message: 'User saved to the database', httpCode: 200 };
     }
     catch (error) {
-        return res.status(500).json({ 'message': 'Internal Server Error' });
+        return { message: error, httpCode: 500 };
     }
 });
-exports.getAnnouncementController = getAnnouncementController;
+exports.addSubject = addSubject;

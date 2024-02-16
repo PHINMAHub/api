@@ -1,12 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const student_1 = require("../controller/student");
-const entry_1 = require("../controller/entry");
+const user_1 = require("../services/user");
 const router = (0, express_1.Router)();
-router.get('/student', student_1.findAllStudent);
-router.get('/student/:id', student_1.findStudent);
-router.put('/student/:id', student_1.updateStudent);
-router.delete('/student/:id', student_1.deleteStudent);
-router.post('/student', entry_1.registerUserController);
+// JUST FOR CHECKING
+router.get('/all', user_1.findAllUsers);
+router.delete('/all', user_1.deleteAllUsers);
+// router.get('/student', findAllStudent);
+// router.get('/student/:id', findStudent);
+// router.put('/student/:id', updateStudent);
+// router.delete('/student/:id', deleteStudent);
+// router.post('/student', registerUserController);
 exports.default = router;

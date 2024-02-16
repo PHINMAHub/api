@@ -9,17 +9,18 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAnnouncementController = void 0;
-const student_1 = require("../services/student");
-const getAnnouncementController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.addAnnouncementController = void 0;
+const professor_1 = require("../services/professor");
+const addAnnouncementController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     try {
-        const studentID = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userID;
-        const result = yield (0, student_1.getAnnouncement)(studentID);
+        const { header, announcement, classID } = req.body;
+        const professorID = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userID;
+        const result = yield (0, professor_1.addAnnouncement)(header, announcement, professorID, classID);
         return res.status(result.httpCode).json({ 'message': result.message });
     }
     catch (error) {
         return res.status(500).json({ 'message': 'Internal Server Error' });
     }
 });
-exports.getAnnouncementController = getAnnouncementController;
+exports.addAnnouncementController = addAnnouncementController;

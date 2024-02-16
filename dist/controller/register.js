@@ -9,17 +9,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAnnouncementController = void 0;
-const student_1 = require("../services/student");
-const getAnnouncementController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+exports.addSubjectController = void 0;
+const subject_1 = require("../services/subject");
+const addSubjectController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const studentID = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userID;
-        const result = yield (0, student_1.getAnnouncement)(studentID);
-        return res.status(result.httpCode).json({ 'message': result.message });
+        const { subjectCode, subjectDescription } = req.body;
+        // check auth and if not empty
+        (0, subject_1.addSubject)(subjectCode, subjectDescription);
+        return res.status(200).json({ 'message': 'Data' });
     }
-    catch (error) {
-        return res.status(500).json({ 'message': 'Internal Server Error' });
+    catch (_a) {
+        res.status(500).json({ 'message': 'Internal Server Error' });
     }
 });
-exports.getAnnouncementController = getAnnouncementController;
+exports.addSubjectController = addSubjectController;

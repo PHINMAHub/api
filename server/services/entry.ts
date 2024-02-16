@@ -1,14 +1,15 @@
 import { ObjectId, Types } from 'mongoose';
 import { HttpResponse } from '../models/http-response';
-import { Student, UserCredentials } from '../models/user';
+import { UserCredentials, Student, Professor, Admin } from '../models/user';
 import * as bcrypt from 'bcrypt';
+import { ProfessorHandledClass } from '../models/classModel/professorClass';
+import { StudentSubjects } from '../models/classModel/studentClass';
 
 export const loginUsertoDatabase = async (userIdentifier: string, password: string) => {
     try {
         let result = await UserCredentials.findOne({
-            $or: [{ username: { $regex: new RegExp(`^${userIdentifier}$`, 'i') } }, { emailAddress: { $regex: new RegExp(`^${userIdentifier}$`, 'i') } }],
+            $or: [{ username: { $regex: new RegExp(`^${userIdentifier}$`, 'i') } }, { personalEmail: { $regex: new RegExp(`^${userIdentifier}$`, 'i') } }, { schoolEmail: { $regex: new RegExp(`^${userIdentifier}$`, 'i') } }],
         });
-
         if (result) {
             if (await bcrypt.compare(password, result.passwordHash)) {
                 return new HttpResponse({ 'message': 'success' }, 200);
@@ -20,36 +21,81 @@ export const loginUsertoDatabase = async (userIdentifier: string, password: stri
         return new HttpResponse({ 'message': 'Internal Server Error.' }, 500);
     }
 };
-export const registerUsertoDatabase = async (firstName: string, middleName: string, lastName: string, course: string, section: string, birthday: string, enrolled: boolean, username: string, emailAddress: string, password: string, userType: string) => {
+
+export const registerUsertoDatabase = async (firstName: string, middleName: string, lastName: string, username: string, personalEmail: string, schoolEmail: string, personalNumber: string, schoolNumber: string, address: string, birthday: string, password: string, userType: string, enrolled: boolean, course: string, section: string, studentID: string, department: string, active: boolean) => {
     try {
         const saltRounds = await bcrypt.genSalt();
         password = await bcrypt.hash(password, saltRounds);
         const userCredentialResult = await new UserCredentials({
             username,
-            emailAddress,
+            personalEmail,
+            schoolEmail,
             passwordHash: password,
             userType,
             userInformation: null,
         }).save();
-
-        const studentData = {
-            firstName,
-            middleName,
-            lastName,
-            course,
-            section,
-            birthday: new Date(birthday),
-            enrolled,
-            userCredentials: userCredentialResult._id,
-        };
-
-        const student = new Student(studentData);
-        userCredentialResult.userInformation = student._id;
-
-        await student.save();
-        return true;
+        let user;
+        if (userType.toLowerCase() === 'student') {
+            const studentSubjects = await new StudentSubjects({}).save();
+            user = new Student({
+                firstName,
+                middleName,
+                lastName,
+                personalNumber,
+                schoolNumber,
+                address,
+                birthday,
+                studentID,
+                course,
+                section,
+                enrolled,
+                userCredentials: userCredentialResult._id,
+                studentSubjects: studentSubjects._id,
+            });
+            studentSubjects.student = user._id;
+            await studentSubjects.save();
+        } else if (userType.toLowerCase() === 'professor') {
+            const professorClass = await new ProfessorHandledClass({}).save();
+            user = new Professor({
+                firstName,
+                middleName,
+                lastName,
+                personalNumber,
+                schoolNumber,
+                address,
+                birthday,
+                department,
+                active,
+                userCredentials: userCredentialResult._id,
+                professorHandledClass: professorClass._id,
+            });
+            professorClass.professor = user._id;
+            await professorClass.save();
+        } else if (userType.toLowerCase() === 'admin') {
+            user = new Admin({
+                firstName,
+                middleName,
+                lastName,
+                personalNumber,
+                schoolNumber,
+                address,
+                birthday,
+                active,
+                department,
+                userCredentials: userCredentialResult._id,
+            });
+        }
+        if (user) {
+            userCredentialResult.userInformation = user._id;
+            await userCredentialResult.save();
+            await user.save();
+            return { message: 'User saved to the database', httpCode: 200 };
+        } else {
+            await UserCredentials.deleteOne({ _id: userCredentialResult._id });
+            return { message: 'Error on saving the user', httpCode: 500 };
+        }
     } catch (error) {
-        return false;
+        return { message: error, httpCode: 500 };
     }
 };
 export const checkUsernameAvailability = async (username: string): Promise<boolean> => {
@@ -71,12 +117,12 @@ export const checkEmailAvailability = async (emailAddress: string): Promise<bool
     }
 };
 
-export const getUserIDandType = async (userIdentifier: string): Promise<ObjectId[] | null> => {
-    const result = await UserCredentials.findOne({ $or: [{ username: { $regex: new RegExp(userIdentifier, 'i') } }, { emailAddress: { $regex: new RegExp(userIdentifier, 'i') } }] });
+export const getUserIDandType = async (userIdentifier: string): Promise<String[] | null> => {
+    const result = await UserCredentials.findOne({ $or: [{ username: { $regex: new RegExp(userIdentifier, 'i') } }, { personalEmail: { $regex: new RegExp(userIdentifier, 'i') } }, { schoolEmail: { $regex: new RegExp(userIdentifier, 'i') } }] });
     if (result) {
-        const userID: unknown = result._id;
+        const userID: unknown = result.userInformation;
         const userType: unknown = result.userType;
-        return [userID as ObjectId, userType as ObjectId];
+        return [userID as String, userType as String];
     }
     return null;
 };

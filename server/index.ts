@@ -1,12 +1,15 @@
 import express, { Express, Request, Response } from 'express';
 import bodyParser from 'body-parser';
 import mongoose from 'mongoose';
-
+import cors from 'cors';
 import dotenv from 'dotenv';
 dotenv.config();
 
 import entryRoutes from './routes/entry';
 import userRoutes from './routes/user';
+import registrationRoutes from './routes/registration';
+import professorRoutes from './routes/professor';
+import studentRoutes from './routes/student';
 
 const app = express();
 const port = 3000;
@@ -22,6 +25,7 @@ mongoose
         console.log(error);
     });
 
+app.use();
 app.use(express.json());
 app.use(
     bodyParser.urlencoded({
@@ -31,6 +35,9 @@ app.use(
 
 app.use('/entry/', entryRoutes);
 app.use('/user/', userRoutes);
+app.use('/registration/', registrationRoutes);
+app.use('/professor/', professorRoutes);
+app.use('/student/', studentRoutes);
 
 app.get('/', (req, res) => {
     res.send('Hello from your Node.js Express server!');
