@@ -25,7 +25,6 @@ mongoose
         console.log(error);
     });
 
-app.use();
 app.use(express.json());
 app.use(
     bodyParser.urlencoded({
