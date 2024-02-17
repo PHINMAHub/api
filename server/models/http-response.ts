@@ -6,4 +6,4 @@ export class HttpResponse {
         this.code = errorCode;
     }
 }
-// module.exports = HttpResponse
+// module.exports = HttpResponses
