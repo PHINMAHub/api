@@ -32,9 +32,9 @@ export const registerUsertoDatabase = async (firstName: string, middleName: stri
             schoolEmail,
             passwordHash: password,
             userType,
-            userInformation: null,
         }).save();
-        let user;
+        let user,
+            userTypeID = 0;
         if (userType.toLowerCase() === 'student') {
             const studentSubjects = await new StudentSubjects({}).save();
             user = new Student({
@@ -54,6 +54,7 @@ export const registerUsertoDatabase = async (firstName: string, middleName: stri
             });
             studentSubjects.student = user._id;
             await studentSubjects.save();
+            userCredentialResult.studentInformation = user._id;
         } else if (userType.toLowerCase() === 'professor') {
             const professorClass = await new ProfessorHandledClass({}).save();
             user = new Professor({
@@ -71,6 +72,7 @@ export const registerUsertoDatabase = async (firstName: string, middleName: stri
             });
             professorClass.professor = user._id;
             await professorClass.save();
+            userCredentialResult.studentInformation = user._id;
         } else if (userType.toLowerCase() === 'admin') {
             user = new Admin({
                 firstName,
@@ -84,9 +86,9 @@ export const registerUsertoDatabase = async (firstName: string, middleName: stri
                 department,
                 userCredentials: userCredentialResult._id,
             });
+            userCredentialResult.studentInformation = user._id;
         }
         if (user) {
-            userCredentialResult.userInformation = user._id;
             await userCredentialResult.save();
             await user.save();
             return { message: 'User saved to the database', httpCode: 200 };
@@ -117,12 +119,16 @@ export const checkEmailAvailability = async (emailAddress: string): Promise<bool
     }
 };
 
-export const getUserIDandType = async (userIdentifier: string): Promise<String[] | null> => {
-    const result = await UserCredentials.findOne({ $or: [{ username: { $regex: new RegExp(userIdentifier, 'i') } }, { personalEmail: { $regex: new RegExp(userIdentifier, 'i') } }, { schoolEmail: { $regex: new RegExp(userIdentifier, 'i') } }] });
+export const getUserIDandType = async (userIdentifier: string): Promise<string[] | null> => {
+    const result = await UserCredentials.findOne({ $or: [{ username: { $regex: new RegExp(userIdentifier, 'i') } }, { personalEmail: { $regex: new RegExp(userIdentifier, 'i') } }, { schoolEmail: { $regex: new RegExp(userIdentifier, 'i') } }] }).populate('studentInformation').populate('professorInformation').populate('adminInformation');
     if (result) {
-        const userID: unknown = result.userInformation;
+        let userID: unknown = result.userType === 'student' ? result.studentInformation : result.userType === 'professor' ? result.professorInformation : result.adminInformation;
+        
         const userType: unknown = result.userType;
-        return [userID as String, userType as String];
+        const userData : any = userType === 'student' ? result.studentInformation : userType === 'professor' ? result.professorInformation : result.adminInformation
+        const userFullName: unknown =  `${userData?.firstName} ${userData?.middleName ?? userData?.middleName} ${userData?.lastName}`;
+        const username: unknown =  result?.username;
+        return [userID as string, userType as string, userFullName as string, username as string];
     }
     return null;
 };

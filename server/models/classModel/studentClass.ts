@@ -9,16 +9,16 @@ const studentCheckSubmissionSchema = new Schema(
         },
         attachment: [
             {
-                type: Buffer,
+                type: String,
             },
         ],
         score: {
             type: Number,
-            default: 0,
+            default: null,
         },
-        class: {
+        task: {
             type: Schema.Types.ObjectId,
-            ref: 'Class',
+            ref: 'Check',
             default: null,
         },
     },
@@ -33,20 +33,18 @@ const studentConnectSubmissionSchema = new Schema(
             ref: 'Student',
             default: null,
         },
-        answer: [
-            {
-                type: Schema.Types.ObjectId,
-                ref: 'ConnectChoices',
-                default: null,
-            },
-        ],
+        answer: {
+            type: Schema.Types.ObjectId,
+            ref: 'ConnectChoices',
+            default: null,
+        },
         score: {
             type: Number,
-            default: 0,
+            default: null,
         },
-        class: {
+        task: {
             type: Schema.Types.ObjectId,
-            ref: 'Class',
+            ref: 'Connect',
             default: null,
         },
     },
@@ -61,9 +59,9 @@ const studentCoachViewSchema = new Schema(
             ref: 'Student',
             default: null,
         },
-        class: {
+        task: {
             type: Schema.Types.ObjectId,
-            ref: 'Class',
+            ref: 'Coach',
             default: null,
         },
     },

@@ -26,17 +26,33 @@ const userCredentialSchema = new Schema({
         type: String,
         required: [true, 'Please enter user type.'],
     },
-    userInformation: {
-        type: Schema.Types.ObjectId,
+    studentInformation: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Student',
+        default: null,
+    },
+    professorInformation: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Professor',
+        default: null,
+    },
+    adminInformation: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Admin',
         default: null,
     },
     inbox: [
         {
-            userInformation: {
-                type: Schema.Types.ObjectId,
-                ref: 'Inbox',
-                default: null,
-            },
+            type: Schema.Types.ObjectId,
+            ref: 'Inbox',
+            default: null,
+        },
+    ],
+    notification: [
+        {
+            type: Schema.Types.ObjectId,
+            ref: 'NotificationHolder',
+            default: null,
         },
     ],
 });
@@ -87,6 +103,10 @@ const studentSchema = new Schema(
             type: String,
             required: [true, 'Please enter your section'],
         },
+        year: {
+            type: String,
+            required: [true, 'Please enter your year'],
+        },
         enrolled: {
             type: Boolean,
             required: [true, 'Please enter your enrolled status'],
@@ -124,6 +144,10 @@ const professorSchema = new Schema(
         department: {
             type: String,
             required: [true, 'Please enter your department'],
+        },
+        major: {
+            type: String,
+            required: [true, 'Please enter your major'],
         },
         personalNumber: {
             type: String,

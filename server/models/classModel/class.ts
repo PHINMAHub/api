@@ -4,7 +4,7 @@ const checkSchema = new Schema(
     {
         class: {
             type: Schema.Types.ObjectId,
-            ref: 'ConnectChoices',
+            ref: 'Class',
             default: null,
         },
         postTitle: {
@@ -19,7 +19,7 @@ const checkSchema = new Schema(
         },
         attachment: [
             {
-                type: Buffer,
+                type: String,
             },
         ],
         respondents: {
@@ -33,6 +33,14 @@ const checkSchema = new Schema(
                 default: null,
             },
         ],
+        highestPossibleScore: {
+            type: Number,
+            default: 0,
+        },
+        lateSubmission: {
+            type: Boolean,
+            default: false,
+        },
     },
     {
         timestamps: true,
@@ -45,7 +53,7 @@ const coachSchema = new Schema(
     {
         class: {
             type: Schema.Types.ObjectId,
-            ref: 'ConnectChoices',
+            ref: 'Class',
             default: null,
         },
         postTitle: {
@@ -57,7 +65,7 @@ const coachSchema = new Schema(
         },
         attachment: [
             {
-                type: Buffer,
+                type: String,
             },
         ],
         view: {
@@ -77,6 +85,17 @@ const connectChoicesSchema = new Schema({
         type: String,
         required: [true, 'Please enter the choice.'],
     },
+    respondents: {
+        type: Number,
+        default: 0,
+    },
+    students: [
+        {
+            type: Schema.Types.ObjectId,
+            ref: 'Student',
+            default: null,
+        },
+    ],
 });
 
 export const ConnectChoices = mongoose.model('ConnectChoices', connectChoicesSchema);
@@ -85,7 +104,7 @@ const connectSchema = new Schema(
     {
         class: {
             type: Schema.Types.ObjectId,
-            ref: 'ConnectChoices',
+            ref: 'Class',
             default: null,
         },
         postTitle: {
@@ -116,6 +135,14 @@ const connectSchema = new Schema(
                 default: null,
             },
         ],
+        highestPossibleScore: {
+            type: Number,
+            default: 0,
+        },
+        lateSubmission: {
+            type: Boolean,
+            default: false,
+        },
     },
     {
         timestamps: true,

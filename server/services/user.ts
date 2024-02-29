@@ -1,13 +1,16 @@
 import express, { Express, Request, Response } from 'express';
 import { Admin, Professor, Student, UserCredentials } from '../models/user';
 import { Announcement } from '../models/classModel/announcement';
-import { Check, Class, Coach, Connect } from '../models/classModel/class';
+import { Check, Class, Coach, Connect, ConnectChoices } from '../models/classModel/class';
 import { ProfessorHandledClass } from '../models/classModel/professorClass';
 import { StudentCheckSubmission, StudentCoachView, StudentConnectSubmission, StudentSubjects } from '../models/classModel/studentClass';
 import { Subject } from '../models/classModel/subject';
 import { Inbox } from '../models/inbox';
 import { Message } from '../models/message';
+import { Types } from 'mongoose';
+import { User } from '../middleware/authentication';
 
+// TODO: remove this, this is temporary
 export const findAllUsers = async (req: Request, res: Response) => {
     try {
         const students = await Student.find({})
@@ -42,8 +45,9 @@ export const findAllUsers = async (req: Request, res: Response) => {
         const subject = await Subject.find({});
         const inbox = await Inbox.find({});
         const message = await Message.find({});
+        const choices = await ConnectChoices.find({});
 
-        res.status(200).json({ admin, students, professor, announcement, check, connect, coach, classes, professorHandledClass, studentConnectSubmission, studentCheckSubmission, studentCoachView, studentSubjects, subject, inbox, message });
+        res.status(200).json({ admin, students, professor, announcement, check, connect, coach, classes, professorHandledClass, studentConnectSubmission, studentCheckSubmission, studentCoachView, studentSubjects, subject, inbox, message, choices });
     } catch (error) {
         res.status(500).json('No Students found');
     }
@@ -84,5 +88,97 @@ export const findProfessorByID = async (id: string) => {
         return professor;
     } catch (error) {
         return { 'message': 'No professor found', 'httpCode': 500 };
+    }
+};
+
+// Profile
+export const getUserProfile = async (userID: string, userType: string) => {
+    try {
+        const populateDataByType = userType === 'student' ? 'studentInformation' : userType === 'professor' ? 'professorInformation' : 'adminInformation';
+        const findDataByType = userType === 'student' ? { studentInformation: userID } : userType === 'professor' ? { professorInformation: userID } : { adminInformation: userID };
+        const userDetails = await UserCredentials.findOne(findDataByType).populate(populateDataByType).exec();
+        if (userDetails) {
+            return { message: userDetails, httpCode: 200 };
+        }
+
+        return { 'message': 'No user found', 'httpCode': 500 };
+    } catch (error) {
+        return { 'message': 'No user found', 'httpCode': 500 };
+    }
+};
+// Course
+export const getUserSubject = async (userID: string, userType: string) => {
+    try {
+        const userDetails =
+            userType === 'student'
+                ? await Student.findById(userID, 'studentSubjects')
+                      .populate({
+                          path: 'studentSubjects',
+                          populate: {
+                              path: 'class',
+                              populate: {
+                                  path: 'subject',
+                              },
+                          },
+                      })
+                      .populate({
+                          path: 'studentSubjects',
+                          populate: {
+                              path: 'class',
+                              populate: {
+                                  path: 'professor',
+                              },
+                          },
+                      })
+                      .exec()
+                : await Professor.findById(userID, 'professorHandledClass')
+                      .populate({
+                          path: 'professorHandledClass',
+                          populate: {
+                              path: 'class',
+                              populate: {
+                                  path: 'subject',
+                              },
+                          },
+                      })
+                      .populate({
+                          path: 'professorHandledClass',
+                          populate: {
+                              path: 'class',
+                              populate: {
+                                  path: 'professor',
+                              },
+                          },
+                      })
+                      .exec();
+
+        if (userDetails) {
+            return { message: { userDetails, userType }, httpCode: 200 };
+        }
+
+        return { 'message': 'No user found', 'httpCode': 500 };
+    } catch (error) {
+        return { 'message': 'No user found', 'httpCode': 500 };
+    }
+};
+
+export const joinClass = async (user: User, socket: any) => {
+    try {
+        const result = await Student.findById(user.userID, 'studentSubjects/class').populate({
+            path: 'studentSubjects',
+            populate: {
+                path: 'class',
+            },
+        });
+        for (const classObj of (result?.studentSubjects as any)?.class) {
+            socket.join(classObj?._id);
+        }
+        if (result) {
+            return { message: 'Successfully joined the class socket', httpCode: 200 };
+        }
+
+        return { 'message': 'No user found', 'httpCode': 500 };
+    } catch (error) {
+        return { 'message': 'No user found', 'httpCode': 500 };
     }
 };
