@@ -1,0 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const feed_1 = require("../controller/feed");
+const authentication_1 = require("../middleware/authentication");
+const professor_1 = require("../middleware/professor");
+const router = (0, express_1.Router)();
+router.get('/feed', authentication_1.authenticateToken, feed_1.getAnnouncementController);
+router.post('/post', authentication_1.authenticateToken, professor_1.professorOnly, feed_1.postAnnoucementController);
+exports.default = router;
