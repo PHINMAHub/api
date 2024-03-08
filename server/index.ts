@@ -37,7 +37,7 @@ mongoose
 
 app.use(
     cors({
-        origin: ORIGIN_URL,
+        origin: 'https://client-one-chi-73.vercel.app',
         methods: '*',
         credentials: true,
     })
@@ -70,7 +70,7 @@ server.listen(port, () => {
 
 export const io = new Server(server, {
     cors: {
-        origin: ORIGIN_URL,
+        origin: 'https://client-one-chi-73.vercel.app',
         methods: '*',
         credentials: true,
     },
