@@ -35,12 +35,7 @@ mongoose
         console.log('Internal Server Error');
     });
 
-app.use(
-    cors({
-        origin: ORIGIN_URL,
-        credentials: true,
-    })
-);
+app.use(cors());
 app.use(express.json());
 app.use(
     bodyParser.urlencoded({
@@ -69,7 +64,7 @@ server.listen(port, () => {
 
 export const io = new Server(server, {
     cors: {
-        origin: ORIGIN_URL,
+        origin: '*',
     },
 });
 
