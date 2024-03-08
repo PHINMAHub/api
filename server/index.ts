@@ -24,7 +24,7 @@ const server = http.createServer(app);
 const port = 3000;
 
 const MONGODB_CONNECTION: any = process.env.MONGODB_CONNECTION;
-const ORIGIN_URL: any = process.env.ORIGIN_URL || ['https://client-72q1e2aab-dreamers-projects-82b45cfd.vercel.app/', '*'];
+const ORIGIN_URL: any = process.env.ORIGIN_URL || ['https://client-72q1e2aab-dreamers-projects-82b45cfd.vercel.app', '*'];
 
 mongoose
     .connect(MONGODB_CONNECTION)
