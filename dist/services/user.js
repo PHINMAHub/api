@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.joinClass = exports.getUserSubject = exports.getUserProfile = exports.findProfessorByID = exports.deleteAllUsers = exports.findAllUsers = void 0;
+exports.getClassPeople = exports.getClassTask = exports.joinClass = exports.getUserSubject = exports.getUserProfile = exports.findProfessorByID = exports.deleteAllUsers = exports.findAllUsers = void 0;
 const user_1 = require("../models/user");
 const announcement_1 = require("../models/classModel/announcement");
 const class_1 = require("../models/classModel/class");
@@ -40,6 +40,7 @@ const findAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         })
             .exec();
         const admin = yield user_1.Admin.find({}).populate('userCredentials').exec();
+        const userCredentials = yield user_1.UserCredentials.find({});
         const announcement = yield announcement_1.Announcement.find({});
         const check = yield class_1.Check.find({});
         const connect = yield class_1.Connect.find({});
@@ -54,7 +55,7 @@ const findAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         const inbox = yield inbox_1.Inbox.find({});
         const message = yield message_1.Message.find({});
         const choices = yield class_1.ConnectChoices.find({});
-        res.status(200).json({ admin, students, professor, announcement, check, connect, coach, classes, professorHandledClass, studentConnectSubmission, studentCheckSubmission, studentCoachView, studentSubjects, subject, inbox, message, choices });
+        res.status(200).json({ userCredentials, admin, students, professor, announcement, check, connect, coach, classes, professorHandledClass, studentConnectSubmission, studentCheckSubmission, studentCoachView, studentSubjects, subject, inbox, message, choices });
     }
     catch (error) {
         res.status(500).json('No Students found');
@@ -194,3 +195,26 @@ const joinClass = (user, socket) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.joinClass = joinClass;
+const getClassTask = (classID) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const resultCoach = yield class_1.Coach.find({ class: classID }).sort({ createdAt: -1 });
+        const resultCheck = yield class_1.Check.find({ class: classID }).sort({ createdAt: -1 });
+        const resultConnect = yield class_1.Connect.find({ class: classID }).sort({ createdAt: -1 });
+        const result = [...resultCheck, ...resultCoach, ...resultConnect];
+        return result;
+    }
+    catch (error) {
+        return { 'message': 'No Coach' };
+    }
+});
+exports.getClassTask = getClassTask;
+const getClassPeople = (classID) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const result = yield class_1.Class.findById(classID).populate('students').populate('professor');
+        return result;
+    }
+    catch (error) {
+        return { 'message': 'No Coach' };
+    }
+});
+exports.getClassPeople = getClassPeople;

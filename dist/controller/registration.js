@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.removeStudentInClassController = exports.enrollStudentInClassController = exports.deleteAllClassController = exports.addClassController = exports.deleteAllSubjectController = exports.getSubjectController = exports.addSubjectController = void 0;
+exports.getClassIDController = exports.getStudentIDController = exports.getSubjectIDController = exports.getProfessorIDController = exports.removeStudentInClassController = exports.enrollStudentInClassController = exports.deleteAllClassController = exports.addClassController = exports.deleteAllSubjectController = exports.getSubjectController = exports.addSubjectController = void 0;
 const registration_1 = require("../services/registration");
 const addSubjectController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -74,13 +74,12 @@ exports.deleteAllClassController = deleteAllClassController;
 const enrollStudentInClassController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { studentID, classID } = req.body;
-        // TODO: enroll student once
         const studentInClass = yield (0, registration_1.checkStudentInClass)(studentID, classID);
         if (!studentInClass) {
             const result = yield (0, registration_1.enrollStudentInClass)(studentID, classID);
             return res.status(result.httpCode).json({ 'message': result.message });
         }
-        return res.status(200).json({ 'message': "Student is already enrolled" });
+        return res.status(200).json({ 'message': 'Student is already enrolled' });
     }
     catch (_f) {
         res.status(500).json({ 'message': 'Internal Server Error' });
@@ -98,3 +97,47 @@ const removeStudentInClassController = (req, res) => __awaiter(void 0, void 0, v
     }
 });
 exports.removeStudentInClassController = removeStudentInClassController;
+const getProfessorIDController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const query = req.query.query;
+        const result = yield (0, registration_1.getProfessorID)(query);
+        return res.status(result.httpCode).json({ 'message': result.message });
+    }
+    catch (_h) {
+        res.status(500).json({ 'message': 'Internal Server Error' });
+    }
+});
+exports.getProfessorIDController = getProfessorIDController;
+const getSubjectIDController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const query = req.query.query;
+        const result = yield (0, registration_1.getSubjectID)(query);
+        return res.status(result.httpCode).json({ 'message': result.message });
+    }
+    catch (_j) {
+        res.status(500).json({ 'message': 'Internal Server Error' });
+    }
+});
+exports.getSubjectIDController = getSubjectIDController;
+const getStudentIDController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const query = req.query.query;
+        const result = yield (0, registration_1.getStudentID)(query);
+        return res.status(result.httpCode).json({ 'message': result.message });
+    }
+    catch (_k) {
+        res.status(500).json({ 'message': 'Internal Server Error' });
+    }
+});
+exports.getStudentIDController = getStudentIDController;
+const getClassIDController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const query = req.query.query;
+        const result = yield (0, registration_1.getClassID)(query);
+        return res.status(result.httpCode).json({ 'message': result.message });
+    }
+    catch (_l) {
+        res.status(500).json({ 'message': 'Internal Server Error' });
+    }
+});
+exports.getClassIDController = getClassIDController;

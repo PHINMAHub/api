@@ -98,11 +98,9 @@ const studentSchema = new mongoose_1.Schema({
     personalNumber: {
         type: String,
         required: [true, 'Please enter your personal number'],
-        unique: true,
     },
     schoolNumber: {
         type: String,
-        unique: true,
     },
     address: {
         type: String,
@@ -125,6 +123,10 @@ const studentSchema = new mongoose_1.Schema({
         type: String,
         required: [true, 'Please enter your section'],
     },
+    levelOfEducation: {
+        type: String,
+        required: [true, 'Please enter your level of education'],
+    },
     year: {
         type: String,
         required: [true, 'Please enter your year'],
@@ -133,16 +135,22 @@ const studentSchema = new mongoose_1.Schema({
         type: Boolean,
         required: [true, 'Please enter your enrolled status'],
     },
+    summerClass: {
+        type: Boolean,
+        required: [true, 'Please enter summer class'],
+    },
     userCredentials: {
         type: mongoose_1.Schema.Types.ObjectId,
         ref: 'UserCredentials',
         default: null,
     },
-    studentSubjects: {
-        type: mongoose_1.Schema.Types.ObjectId,
-        ref: 'StudentSubjects',
-        default: null,
-    },
+    studentSubjects: [
+        {
+            type: mongoose_1.Schema.Types.ObjectId,
+            ref: 'StudentSubjects',
+            default: null,
+        },
+    ],
 }, {
     timestamps: true,
 });
@@ -163,18 +171,13 @@ const professorSchema = new mongoose_1.Schema({
         type: String,
         required: [true, 'Please enter your department'],
     },
-    major: {
-        type: String,
-        required: [true, 'Please enter your major'],
-    },
     personalNumber: {
         type: String,
         required: [true, 'Please enter your personal number'],
-        unique: true,
     },
     schoolNumber: {
         type: String,
-        unique: true,
+        default: '',
     },
     address: {
         type: String,
@@ -194,11 +197,13 @@ const professorSchema = new mongoose_1.Schema({
         ref: 'UserCredentials',
         default: null,
     },
-    professorHandledClass: {
-        type: mongoose_1.Schema.Types.ObjectId,
-        ref: 'ProfessorHandledClass',
-        default: null,
-    },
+    professorHandledClass: [
+        {
+            type: mongoose_1.Schema.Types.ObjectId,
+            ref: 'ProfessorHandledClass',
+            default: null,
+        },
+    ],
 }, {
     timestamps: true,
 });
@@ -217,11 +222,9 @@ const adminSchema = new mongoose_1.Schema({
     personalNumber: {
         type: String,
         required: [true, 'Please enter your personal number'],
-        unique: true,
     },
     schoolNumber: {
         type: String,
-        unique: true,
     },
     address: {
         type: String,

@@ -9,10 +9,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.submitConnect = exports.submitCheck = exports.getCoach = exports.getConnect = exports.getCheck = exports.getAnnouncement = void 0;
+exports.submitConnect = exports.unSubmitCheck = exports.submitCheck = exports.getConnectTask = exports.getCheckTask = exports.getCoach = exports.getConnect = exports.getCheck = exports.getAnnouncement = void 0;
 const user_1 = require("../models/user");
 const studentClass_1 = require("../models/classModel/studentClass");
 const class_1 = require("../models/classModel/class");
+const storage_1 = require("firebase/storage");
+const upload_1 = require("./upload");
 // export const findAllStudent = async (req: Request, res: Response) => {
 //     try {
 //         const students = await Student.find({});
@@ -65,7 +67,6 @@ const class_1 = require("../models/classModel/class");
 //         const student = await Student.create(req.body);
 //         res.status(200).json(student);
 //     } catch (error: any) {
-//         console.log(error.message);
 //         res.status(500).json({ message: error.message });
 //     }
 // };
@@ -110,7 +111,9 @@ const getCheck = (userID) => __awaiter(void 0, void 0, void 0, function* () {
         const noDueDate = [], thisWeek = [], nextWeek = [], later = [], missing = [];
         const classesObj = yield studentClass_1.StudentSubjects.findOne({ student: userID });
         for (const classObj of classesObj === null || classesObj === void 0 ? void 0 : classesObj.class) {
-            const checks = yield class_1.Check.find({ class: classObj }).sort({ dueDate: 1 });
+            const checks = yield class_1.Check.find({ class: classObj })
+                .populate({ path: 'class', populate: { path: 'subject' } })
+                .sort({ dueDate: 1 });
             for (const check of checks) {
                 if (!check.studentSubmission.includes(userID)) {
                     if (check.dueDate) {
@@ -150,7 +153,10 @@ const getConnect = (userID) => __awaiter(void 0, void 0, void 0, function* () {
         const thisWeek = [], nextWeek = [], later = [], missing = [];
         const classesObj = yield studentClass_1.StudentSubjects.findOne({ student: userID });
         for (const classObj of classesObj === null || classesObj === void 0 ? void 0 : classesObj.class) {
-            const connects = yield class_1.Connect.find({ class: classObj }).populate('postChoices').sort({ dueDate: 1 });
+            const connects = yield class_1.Connect.find({ class: classObj })
+                .populate('postChoices')
+                .populate({ path: 'class', populate: { path: 'subject' } })
+                .sort({ dueDate: 1 });
             for (const connect of connects) {
                 if (!connect.studentSubmission.includes(userID)) {
                     if (connect.dueDate) {
@@ -199,6 +205,45 @@ const getCoach = (userID) => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 exports.getCoach = getCoach;
+const getCheckTask = (taskID, userID) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const result = yield class_1.Check.findById(taskID)
+            .populate('attachment')
+            .populate({ path: 'studentSubmission', populate: { path: 'attachment' } })
+            .exec();
+        if (result && userID) {
+            // Filter studentSubmission to include only submissions of the desired student
+            const filteredSubmissions = result.studentSubmission.filter((submission) => submission.student.toString() === userID._id);
+            // Update result.studentSubmission to contain only the filtered submissions
+            result.studentSubmission = filteredSubmissions;
+        }
+        return result;
+    }
+    catch (error) {
+        return { 'message': 'No Check Task' };
+    }
+});
+exports.getCheckTask = getCheckTask;
+const getConnectTask = (taskID, userID) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const result = yield class_1.Connect.findById(taskID)
+            .populate({ path: 'studentSubmission', populate: { path: 'answer' } })
+            .populate('postChoices')
+            .populate('class')
+            .exec();
+        if (result && userID) {
+            // Filter studentSubmission to include only submissions of the desired student
+            const filteredSubmissions = result.studentSubmission.filter((submission) => submission.student.toString() === userID._id);
+            // Update result.studentSubmission to contain only the filtered submissions
+            result.studentSubmission = filteredSubmissions;
+        }
+        return result;
+    }
+    catch (error) {
+        return { 'message': 'No Connect Task' };
+    }
+});
+exports.getConnectTask = getConnectTask;
 const submitCheck = (taskID, userID, files) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         let newStudentCheckSubmission = yield new studentClass_1.StudentCheckSubmission({
@@ -207,17 +252,30 @@ const submitCheck = (taskID, userID, files) => __awaiter(void 0, void 0, void 0,
         }).save();
         if (files) {
             for (const file of files) {
-                const imagePath = file.path;
-                newStudentCheckSubmission.attachment.push(imagePath);
+                const storageRef = (0, storage_1.ref)(upload_1.storage, `files/${file.originalname}${new Date()}`);
+                const metadata = {
+                    contentType: file.mimetype,
+                };
+                const snapshot = yield (0, storage_1.uploadBytesResumable)(storageRef, file.buffer, metadata);
+                const downloadURL = yield (0, storage_1.getDownloadURL)(snapshot.ref);
+                const fileType = file.mimetype.startsWith('image/') ? 'image' : 'docs';
+                let newAttachment = yield new class_1.Attachement({ url: downloadURL, type: fileType }).save();
+                newStudentCheckSubmission.attachment.push(newAttachment._id);
             }
             yield newStudentCheckSubmission.save();
         }
         let studentSubjectsSchema = yield studentClass_1.StudentSubjects.findOne({ student: userID });
+        let checkSchema = yield class_1.Check.findById(taskID);
         if (!studentSubjectsSchema) {
             return { message: 'Student not found', httpCode: 404 };
         }
+        if (!checkSchema) {
+            return { message: 'Task not found', httpCode: 404 };
+        }
         studentSubjectsSchema.studentCheckSubmission.push(newStudentCheckSubmission._id);
+        checkSchema.studentSubmission.push(newStudentCheckSubmission._id);
         yield studentSubjectsSchema.save();
+        yield checkSchema.save();
         return { message: 'Check submitted', httpCode: 200 };
     }
     catch (error) {
@@ -225,18 +283,59 @@ const submitCheck = (taskID, userID, files) => __awaiter(void 0, void 0, void 0,
     }
 });
 exports.submitCheck = submitCheck;
-const submitConnect = (taskID, userID, answerID) => __awaiter(void 0, void 0, void 0, function* () {
+const unSubmitCheck = (taskID, userID) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        let studentConnectSubmissionSchema = yield new studentClass_1.StudentConnectSubmission({
-            student: userID,
-            answer: answerID,
+        let newStudentCheckSubmission = yield studentClass_1.StudentCheckSubmission.findOne({
+            student: userID._id,
             task: taskID,
-        }).save();
-        let studentSubjectsSchema = yield studentClass_1.StudentSubjects.findOne({ student: userID });
+        });
+        if (!newStudentCheckSubmission) {
+            return { message: 'Check Submission not found', httpCode: 404 };
+        }
+        let studentSubjectsSchema = yield studentClass_1.StudentSubjects.findOneAndUpdate({ student: userID }, { $pull: { studentCheckSubmission: newStudentCheckSubmission._id } }, { new: true });
+        let checkSchema = yield class_1.Check.findOneAndUpdate({ _id: taskID }, { $pull: { studentSubmission: newStudentCheckSubmission._id } }, { new: true });
         if (!studentSubjectsSchema) {
             return { message: 'Student not found', httpCode: 404 };
         }
+        if (!checkSchema) {
+            return { message: 'Task not found', httpCode: 404 };
+        }
+        yield studentSubjectsSchema.save();
+        yield checkSchema.save();
+        yield studentClass_1.StudentCheckSubmission.deleteOne({ _id: newStudentCheckSubmission._id });
+        return { message: 'Check unsubmitted', httpCode: 200 };
+    }
+    catch (error) {
+        return { message: error.message, httpCode: 500 };
+    }
+});
+exports.unSubmitCheck = unSubmitCheck;
+const submitConnect = (taskID, userID, choiceID) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        let studentConnectSubmissionSchema = yield new studentClass_1.StudentConnectSubmission({
+            student: userID,
+            answer: choiceID,
+            task: taskID,
+        }).save();
+        let studentSubjectsSchema = yield studentClass_1.StudentSubjects.findOne({ student: userID });
+        let connectSchema = yield class_1.Connect.findById(taskID);
+        let connectChoiceSchema = yield class_1.ConnectChoices.findById(choiceID);
+        if (!studentSubjectsSchema) {
+            return { message: 'Student not found', httpCode: 404 };
+        }
+        if (!connectSchema) {
+            return { message: 'Task not found', httpCode: 404 };
+        }
+        if (!connectChoiceSchema) {
+            return { message: 'Choice not found', httpCode: 404 };
+        }
         studentSubjectsSchema.studentConnectSubmission.push(studentConnectSubmissionSchema._id);
+        connectSchema.studentSubmission.push(studentConnectSubmissionSchema._id);
+        connectSchema.respondents += 1;
+        connectChoiceSchema.respondents += 1;
+        connectChoiceSchema.students.push(userID._id);
+        yield connectChoiceSchema.save();
+        yield connectSchema.save();
         yield studentSubjectsSchema.save();
         return { message: 'Connect submitted', httpCode: 200 };
     }

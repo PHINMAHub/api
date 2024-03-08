@@ -32,7 +32,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getUserIDandType = exports.checkEmailAvailability = exports.checkUsernameAvailability = exports.registerUsertoDatabase = exports.loginUsertoDatabase = void 0;
+exports.getUserIDandType = exports.checkSchoolEmailAvailability = exports.checkPersonalEmailAvailability = exports.checkUsernameAvailability = exports.registerUsertoDatabase = exports.loginUsertoDatabase = void 0;
 const http_response_1 = require("../models/http-response");
 const user_1 = require("../models/user");
 const bcrypt = __importStar(require("bcrypt"));
@@ -56,20 +56,21 @@ const loginUsertoDatabase = (userIdentifier, password) => __awaiter(void 0, void
     }
 });
 exports.loginUsertoDatabase = loginUsertoDatabase;
-const registerUsertoDatabase = (firstName, middleName, lastName, username, personalEmail, schoolEmail, personalNumber, schoolNumber, address, birthday, password, userType, enrolled, course, section, studentID, department, active) => __awaiter(void 0, void 0, void 0, function* () {
+const registerUsertoDatabase = (firstName, middleName, lastName, username, personalEmail, schoolEmail, personalNumber, schoolNumber, address, birthday, password, userType, enrolled, course, section, studentID, department, active, levelOfEducation, schoolYear, summerClass, year) => __awaiter(void 0, void 0, void 0, function* () {
+    let userCredentialResult;
     try {
         const saltRounds = yield bcrypt.genSalt();
-        password = yield bcrypt.hash(password, saltRounds);
-        const userCredentialResult = yield new user_1.UserCredentials({
+        const hashedPassword = yield bcrypt.hash(password, saltRounds);
+        userCredentialResult = yield new user_1.UserCredentials({
             username,
             personalEmail,
             schoolEmail,
-            passwordHash: password,
+            passwordHash: hashedPassword,
             userType,
         }).save();
-        let user, userTypeID = 0;
+        let user;
         if (userType.toLowerCase() === 'student') {
-            const studentSubjects = yield new studentClass_1.StudentSubjects({}).save();
+            const studentSubjects = yield new studentClass_1.StudentSubjects({ schoolYear }).save();
             user = new user_1.Student({
                 firstName,
                 middleName,
@@ -82,6 +83,9 @@ const registerUsertoDatabase = (firstName, middleName, lastName, username, perso
                 course,
                 section,
                 enrolled,
+                levelOfEducation,
+                summerClass,
+                year,
                 userCredentials: userCredentialResult._id,
                 studentSubjects: studentSubjects._id,
             });
@@ -90,7 +94,7 @@ const registerUsertoDatabase = (firstName, middleName, lastName, username, perso
             userCredentialResult.studentInformation = user._id;
         }
         else if (userType.toLowerCase() === 'professor') {
-            const professorClass = yield new professorClass_1.ProfessorHandledClass({}).save();
+            const professorClass = yield new professorClass_1.ProfessorHandledClass({ schoolYear }).save();
             user = new user_1.Professor({
                 firstName,
                 middleName,
@@ -106,7 +110,7 @@ const registerUsertoDatabase = (firstName, middleName, lastName, username, perso
             });
             professorClass.professor = user._id;
             yield professorClass.save();
-            userCredentialResult.studentInformation = user._id;
+            userCredentialResult.professorInformation = user._id;
         }
         else if (userType.toLowerCase() === 'admin') {
             user = new user_1.Admin({
@@ -121,7 +125,7 @@ const registerUsertoDatabase = (firstName, middleName, lastName, username, perso
                 department,
                 userCredentials: userCredentialResult._id,
             });
-            userCredentialResult.studentInformation = user._id;
+            userCredentialResult.adminInformation = user._id;
         }
         if (user) {
             yield userCredentialResult.save();
@@ -134,6 +138,10 @@ const registerUsertoDatabase = (firstName, middleName, lastName, username, perso
         }
     }
     catch (error) {
+        console.log(error);
+        if (userCredentialResult) {
+            yield userCredentialResult.deleteOne();
+        }
         return { message: error, httpCode: 500 };
     }
 });
@@ -148,19 +156,32 @@ const checkUsernameAvailability = (username) => __awaiter(void 0, void 0, void 0
     }
 });
 exports.checkUsernameAvailability = checkUsernameAvailability;
-const checkEmailAvailability = (emailAddress) => __awaiter(void 0, void 0, void 0, function* () {
+const checkPersonalEmailAvailability = (emailAddress) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const result = (yield user_1.UserCredentials.findOne({ emailAddress: { $regex: new RegExp(`^${emailAddress}$`, 'i') } })) === null;
+        const result = (yield user_1.UserCredentials.findOne({ personalEmail: { $regex: new RegExp(`^${emailAddress}$`, 'i') } })) === null;
         return result;
     }
     catch (error) {
         return false;
     }
 });
-exports.checkEmailAvailability = checkEmailAvailability;
+exports.checkPersonalEmailAvailability = checkPersonalEmailAvailability;
+const checkSchoolEmailAvailability = (emailAddress) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const result = (yield user_1.UserCredentials.findOne({ schoolEmail: { $regex: new RegExp(`^${emailAddress}$`, 'i') } })) === null;
+        return result;
+    }
+    catch (error) {
+        return false;
+    }
+});
+exports.checkSchoolEmailAvailability = checkSchoolEmailAvailability;
 const getUserIDandType = (userIdentifier) => __awaiter(void 0, void 0, void 0, function* () {
     var _b;
-    const result = yield user_1.UserCredentials.findOne({ $or: [{ username: { $regex: new RegExp(userIdentifier, 'i') } }, { personalEmail: { $regex: new RegExp(userIdentifier, 'i') } }, { schoolEmail: { $regex: new RegExp(userIdentifier, 'i') } }] }).populate('studentInformation').populate('professorInformation').populate('adminInformation');
+    const result = yield user_1.UserCredentials.findOne({ $or: [{ username: { $regex: new RegExp(userIdentifier, 'i') } }, { personalEmail: { $regex: new RegExp(userIdentifier, 'i') } }, { schoolEmail: { $regex: new RegExp(userIdentifier, 'i') } }] })
+        .populate('studentInformation')
+        .populate('professorInformation')
+        .populate('adminInformation');
     if (result) {
         let userID = result.userType === 'student' ? result.studentInformation : result.userType === 'professor' ? result.professorInformation : result.adminInformation;
         const userType = result.userType;

@@ -23,13 +23,22 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Class = exports.Connect = exports.ConnectChoices = exports.Coach = exports.Check = void 0;
+exports.Class = exports.Connect = exports.ConnectChoices = exports.Coach = exports.Check = exports.Attachement = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
+const attachmentSchema = new mongoose_1.Schema({
+    url: { type: String },
+    type: { type: String },
+});
+exports.Attachement = mongoose_1.default.model('Attachement', attachmentSchema);
 const checkSchema = new mongoose_1.Schema({
     class: {
         type: mongoose_1.Schema.Types.ObjectId,
         ref: 'Class',
         default: null,
+    },
+    typeOfCheck: {
+        type: String,
+        required: [true, 'Please enter the type.'],
     },
     postTitle: {
         type: String,
@@ -43,7 +52,9 @@ const checkSchema = new mongoose_1.Schema({
     },
     attachment: [
         {
-            type: String,
+            type: mongoose_1.Schema.Types.ObjectId,
+            ref: 'Attachement',
+            default: null,
         },
     ],
     respondents: {
@@ -84,7 +95,9 @@ const coachSchema = new mongoose_1.Schema({
     },
     attachment: [
         {
-            type: String,
+            type: mongoose_1.Schema.Types.ObjectId,
+            ref: 'Attachement',
+            default: null,
         },
     ],
     view: {
@@ -167,6 +180,11 @@ const classSchema = new mongoose_1.Schema({
             default: null,
         },
     ],
+    totalStudents: {
+        type: Number,
+        required: [true, 'Please enter total students.'],
+        default: 0,
+    },
     professor: {
         type: mongoose_1.Schema.Types.ObjectId,
         ref: 'Professor',

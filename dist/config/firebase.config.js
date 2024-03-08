@@ -23,32 +23,17 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ProfessorHandledClass = void 0;
-const mongoose_1 = __importStar(require("mongoose"));
-const professorHandledClassSchema = new mongoose_1.Schema({
-    professor: {
-        type: mongoose_1.Schema.Types.ObjectId,
-        ref: 'Professor',
-        default: null,
+const dotenv = __importStar(require("dotenv"));
+dotenv.config();
+exports.default = {
+    firebaseConfig: {
+        apiKey: process.env.apiKey,
+        authDomain: process.env.authDomain,
+        projectId: process.env.projectId,
+        databaseURL: process.env.databaseURL,
+        storageBucket: process.env.storageBucket,
+        messagingSenderId: process.env.messagingSenderId,
+        appId: process.env.appId,
+        measurementId: process.env.measurementId,
     },
-    schoolYear: {
-        type: String,
-        required: [true, 'Please enter the school year.'],
-        default: '',
-    },
-    class: [
-        {
-            type: mongoose_1.Schema.Types.ObjectId,
-            ref: 'Class',
-            default: null,
-        },
-    ],
-    announcement: [
-        {
-            type: mongoose_1.Schema.Types.ObjectId,
-            ref: 'Announcement',
-            default: null,
-        },
-    ],
-});
-exports.ProfessorHandledClass = mongoose_1.default.model('ProfessorHandledClass', professorHandledClassSchema);
+};

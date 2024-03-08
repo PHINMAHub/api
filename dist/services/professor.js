@@ -9,13 +9,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteConnect = exports.deleteAllConnect = exports.addConnect = exports.deleteCoach = exports.deleteAllCoach = exports.addCoach = exports.deleteCheck = exports.deleteAllCheck = exports.addCheck = exports.deleteAnnouncement = exports.addAnnouncement = exports.getConnectTaskSubmission = exports.getCheckTaskSubmission = exports.getConnectTask = exports.getCheckTask = exports.getCoachTask = exports.getConnect = exports.getCheck = exports.getCoach = exports.getClass = void 0;
+exports.deleteConnect = exports.deleteAllConnect = exports.addConnect = exports.deleteCoach = exports.deleteAllCoach = exports.addCoach = exports.deleteCheck = exports.deleteAllCheck = exports.addCheck = exports.deleteAnnouncement = exports.addAnnouncement = exports.getConnectTaskSubmission = exports.scoreStudentsCheck = exports.scoreStudentsConnect = exports.getCheckTaskSubmission = exports.editHighScoreCheck = exports.editHighScoreConnect = exports.getConnectTask = exports.getCheckTask = exports.getCoachTask = exports.getConnect = exports.getCheck = exports.getCoach = exports.getClassStatistics = exports.getClass = void 0;
 const user_1 = require("../models/user");
 const announcement_1 = require("../models/classModel/announcement");
 const class_1 = require("../models/classModel/class");
 const professorClass_1 = require("../models/classModel/professorClass");
 const notification_1 = require("./notification");
 const studentClass_1 = require("../models/classModel/studentClass");
+const storage_1 = require("firebase/storage");
+const upload_1 = require("./upload");
 // export const findAllProfessor = async (req: Request, res: Response) => {
 //     try {
 //         const professors = await Professor.find({});
@@ -88,19 +90,45 @@ const getClass = (id) => __awaiter(void 0, void 0, void 0, function* () {
             },
         })
             .exec();
-        for (const classObj of (_a = professorsClass === null || professorsClass === void 0 ? void 0 : professorsClass.professorHandledClass) === null || _a === void 0 ? void 0 : _a.class) {
+        for (const classObj of (_a = professorsClass === null || professorsClass === void 0 ? void 0 : professorsClass.professorHandledClass[0]) === null || _a === void 0 ? void 0 : _a.class) {
             result.push(classObj);
         }
         return result;
     }
     catch (error) {
-        return { 'message': 'No Class' };
+        return { 'message': ['No Class'] };
     }
 });
 exports.getClass = getClass;
+const getClassStatistics = (classID) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const result = [];
+        const professorsClass = yield class_1.Class.findById(classID)
+            .populate({
+            path: 'students',
+            populate: {
+                path: 'studentSubjects',
+                populate: [
+                    { path: 'studentCheckSubmission', populate: { path: 'task' } },
+                    { path: 'studentConnectSubmission', populate: { path: 'task' } },
+                ],
+            },
+        })
+            .populate('connect')
+            .populate('check');
+        // for (const classObj of (professorsClass?.professorHandledClass[0] as any)?.class) {
+        //     result.push(classObj);
+        // }
+        return professorsClass;
+    }
+    catch (error) {
+        return { 'message': ['No Class'] };
+    }
+});
+exports.getClassStatistics = getClassStatistics;
 const getCoach = (classID) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const result = yield class_1.Coach.find({ class: classID });
+        const result = yield class_1.Coach.find({ class: classID }).sort({ createdAt: -1 });
         return result;
     }
     catch (error) {
@@ -110,7 +138,7 @@ const getCoach = (classID) => __awaiter(void 0, void 0, void 0, function* () {
 exports.getCoach = getCoach;
 const getCheck = (classID) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const result = yield class_1.Check.find({ class: classID });
+        const result = yield class_1.Check.find({ class: classID }).sort({ createdAt: -1 });
         return result;
     }
     catch (error) {
@@ -120,7 +148,7 @@ const getCheck = (classID) => __awaiter(void 0, void 0, void 0, function* () {
 exports.getCheck = getCheck;
 const getConnect = (classID) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const result = yield class_1.Connect.find({ class: classID });
+        const result = yield class_1.Connect.find({ class: classID }).sort({ createdAt: -1 });
         return result;
     }
     catch (error) {
@@ -130,7 +158,7 @@ const getConnect = (classID) => __awaiter(void 0, void 0, void 0, function* () {
 exports.getConnect = getConnect;
 const getCoachTask = (classID) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const result = yield class_1.Coach.findById(classID);
+        const result = yield class_1.Coach.findById(classID).populate('attachment').exec();
         return result;
     }
     catch (error) {
@@ -140,7 +168,7 @@ const getCoachTask = (classID) => __awaiter(void 0, void 0, void 0, function* ()
 exports.getCoachTask = getCoachTask;
 const getCheckTask = (classID) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const result = yield class_1.Check.findById(classID);
+        const result = yield class_1.Check.findById(classID).populate('attachment').exec();
         return result;
     }
     catch (error) {
@@ -150,7 +178,7 @@ const getCheckTask = (classID) => __awaiter(void 0, void 0, void 0, function* ()
 exports.getCheckTask = getCheckTask;
 const getConnectTask = (classID) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const result = yield class_1.Connect.findById(classID);
+        const result = yield class_1.Connect.findById(classID).populate('postChoices').populate('class').exec();
         return result;
     }
     catch (error) {
@@ -158,22 +186,47 @@ const getConnectTask = (classID) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.getConnectTask = getConnectTask;
-const getCheckTaskSubmission = (classID, taskID) => __awaiter(void 0, void 0, void 0, function* () {
+const editHighScoreConnect = (taskID, editedScoreInt) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const connectTask = yield class_1.Connect.findOneAndUpdate({ _id: taskID }, { $set: { highestPossibleScore: editedScoreInt } }, { new: true });
+        return { message: 'Task high score updated', httpCode: 200 };
+    }
+    catch (error) {
+        return { message: error.message, httpCode: 500 };
+    }
+});
+exports.editHighScoreConnect = editHighScoreConnect;
+const editHighScoreCheck = (taskID, editedScoreInt) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const connectTask = yield class_1.Check.findOneAndUpdate({ _id: taskID }, { $set: { highestPossibleScore: editedScoreInt } }, { new: true });
+        return { message: 'Task high score updated', httpCode: 200 };
+    }
+    catch (error) {
+        return { message: error.message, httpCode: 500 };
+    }
+});
+exports.editHighScoreCheck = editHighScoreCheck;
+const getCheckTaskSubmission = (taskID) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const studentTurnedIn = [], studentGraded = [], studentAssigned = [];
-        const students = yield class_1.Class.findById(classID, 'students');
+        const task = yield class_1.Check.findById(taskID);
+        if (!task) {
+            return 'Class not found.';
+        }
+        const classID = task.class;
+        const students = yield class_1.Class.findById(classID, 'students').populate('students');
         for (const student of students === null || students === void 0 ? void 0 : students.students) {
-            const studentSubmission = yield studentClass_1.StudentCheckSubmission.findOne({ student, task: taskID });
+            const studentSubmission = yield studentClass_1.StudentCheckSubmission.findOne({ student, task: taskID }).populate('attachment').populate('student');
             if (studentSubmission) {
                 if (studentSubmission.score) {
-                    studentGraded.push(student);
+                    studentGraded.push([student, studentSubmission]);
                 }
                 else {
-                    studentTurnedIn.push(student);
+                    studentTurnedIn.push([student, studentSubmission]);
                 }
             }
             else {
-                studentAssigned.push(student);
+                studentAssigned.push([student]);
             }
         }
         return { studentTurnedIn, studentGraded, studentAssigned };
@@ -183,22 +236,52 @@ const getCheckTaskSubmission = (classID, taskID) => __awaiter(void 0, void 0, vo
     }
 });
 exports.getCheckTaskSubmission = getCheckTaskSubmission;
-const getConnectTaskSubmission = (classID, taskID) => __awaiter(void 0, void 0, void 0, function* () {
+const scoreStudentsConnect = (data, task) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        Object.entries(data).forEach(([student, score]) => __awaiter(void 0, void 0, void 0, function* () {
+            let result = yield studentClass_1.StudentConnectSubmission.findOneAndUpdate({ student, task }, { score }, { upsert: true, new: true });
+            console.log(result);
+        }));
+        return { message: 'Students score updated', httpCode: 200 };
+    }
+    catch (error) {
+        return { message: error.message, httpCode: 500 };
+    }
+});
+exports.scoreStudentsConnect = scoreStudentsConnect;
+const scoreStudentsCheck = (data, task) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        Object.entries(data).forEach(([student, score]) => __awaiter(void 0, void 0, void 0, function* () {
+            yield studentClass_1.StudentCheckSubmission.findOneAndUpdate({ student, task }, { score }, { upsert: true, new: true });
+        }));
+        return { message: 'Students score updated', httpCode: 200 };
+    }
+    catch (error) {
+        return { message: error.message, httpCode: 500 };
+    }
+});
+exports.scoreStudentsCheck = scoreStudentsCheck;
+const getConnectTaskSubmission = (taskID) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const studentTurnedIn = [], studentGraded = [], studentAssigned = [];
-        const students = yield class_1.Class.findById(classID, 'students');
+        const task = yield class_1.Connect.findById(taskID);
+        if (!task) {
+            return 'Class not found.';
+        }
+        const classID = task.class;
+        const students = yield class_1.Class.findById(classID, 'students').populate('students');
         for (const student of students === null || students === void 0 ? void 0 : students.students) {
-            const studentSubmission = yield studentClass_1.StudentConnectSubmission.findOne({ student, task: taskID });
+            const studentSubmission = yield studentClass_1.StudentConnectSubmission.findOne({ student, task: taskID }).populate('answer').populate('student');
             if (studentSubmission) {
                 if (studentSubmission.score) {
-                    studentGraded.push(student);
+                    studentGraded.push([student, studentSubmission]);
                 }
                 else {
-                    studentTurnedIn.push(student);
+                    studentTurnedIn.push([student, studentSubmission]);
                 }
             }
             else {
-                studentAssigned.push(student);
+                studentAssigned.push([student]);
             }
         }
         return { studentTurnedIn, studentGraded, studentAssigned };
@@ -247,17 +330,25 @@ const deleteAnnouncement = (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
 });
 exports.deleteAnnouncement = deleteAnnouncement;
-const addCheck = (classID, postTitle, postDescription, dueDate, files) => __awaiter(void 0, void 0, void 0, function* () {
+const addCheck = (classID, postTitle, postDescription, dueDate, typeOfCheck, files) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         let newCheck = yield new class_1.Check({
             postTitle,
             postDescription,
             dueDate,
+            typeOfCheck,
         }).save();
         if (files) {
             for (const file of files) {
-                const imagePath = file.path;
-                newCheck.attachment.push(imagePath);
+                const storageRef = (0, storage_1.ref)(upload_1.storage, `files/${file.originalname}${new Date()}`);
+                const metadata = {
+                    contentType: file.mimetype,
+                };
+                const snapshot = yield (0, storage_1.uploadBytesResumable)(storageRef, file.buffer, metadata);
+                const downloadURL = yield (0, storage_1.getDownloadURL)(snapshot.ref);
+                const fileType = file.mimetype.startsWith('image/') ? 'image' : 'docs';
+                let newAttachment = yield new class_1.Attachement({ url: downloadURL, type: fileType }).save();
+                newCheck.attachment.push(newAttachment._id);
             }
             yield newCheck.save();
         }
@@ -319,8 +410,15 @@ const addCoach = (classID, postTitle, postDescription, files) => __awaiter(void 
         }).save();
         if (files) {
             for (const file of files) {
-                const imagePath = file.path;
-                newCoach.attachment.push(imagePath);
+                const storageRef = (0, storage_1.ref)(upload_1.storage, `files/${file.originalname}${new Date()}`);
+                const metadata = {
+                    contentType: file.mimetype,
+                };
+                const snapshot = yield (0, storage_1.uploadBytesResumable)(storageRef, file.buffer, metadata);
+                const downloadURL = yield (0, storage_1.getDownloadURL)(snapshot.ref);
+                const fileType = file.mimetype.startsWith('image/') ? 'image' : 'docs';
+                let newAttachment = yield new class_1.Attachement({ url: downloadURL, type: fileType }).save();
+                newCoach.attachment.push(newAttachment._id);
             }
             yield newCoach.save();
         }

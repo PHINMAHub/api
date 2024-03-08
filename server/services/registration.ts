@@ -3,7 +3,8 @@ import { Class } from '../models/classModel/class';
 import { ProfessorHandledClass } from '../models/classModel/professorClass';
 import { StudentSubjects } from '../models/classModel/studentClass';
 import { Subject } from '../models/classModel/subject';
-import { Student } from '../models/user';
+import { Professor, Student, UserCredentials } from '../models/user';
+import { serverClient } from '../controller/entry';
 
 export const addSubject = async (subjectCode: string, subjectDescription: string) => {
     try {
@@ -52,9 +53,29 @@ export const addClass = async (professorID: string, block: string, subjectID: st
             block: block,
             subject: subjectID,
         }).save();
-        await ProfessorHandledClass.findOneAndUpdate({ professor: professorID }, { class: classID._id });
+        await ProfessorHandledClass.findOneAndUpdate({ professor: professorID }, { $push: { class: classID._id } });
+        const subjectObj = await Subject.findById(subjectID);
+        const professorObj = await UserCredentials.findOne({ professorInformation: professorID });
+        if (!subjectObj) {
+            return { message: 'Subject not found.', httpCode: 404 };
+        }
+        if (!professorObj) {
+            return { message: 'Professor not found.', httpCode: 404 };
+        }
+        const subjectCode = subjectObj.subjectCode;
+        const professorUsername = professorObj.username;
+        let str = `${subjectCode}${block}`;
+        let modifiedID = str.replace(/ /g, '-').replace(/-/g, '');
+        const channel = serverClient.channel('messaging', modifiedID, {
+            name: `${subjectCode}: ${block}`,
+            members: [professorUsername],
+            created_by_id: 'phubreal',
+        });
+        await channel.create();
+
         return { message: 'Professor handling the class', httpCode: 200 };
     } catch (error) {
+        console.log(error);
         return { message: error, httpCode: 500 };
     }
 };
@@ -72,7 +93,7 @@ export const deleteAllClass = async () => {
 };
 export const deleteClass = async (classID: string) => {
     try {
-        const subject = await Class.deleteOne({_id: classID});
+        const subject = await Class.deleteOne({ _id: classID });
         if (subject.deletedCount > 0) {
             return { message: 'Class deleted successfully', httpCode: 200 };
         } else {
@@ -85,19 +106,51 @@ export const deleteClass = async (classID: string) => {
 export const enrollStudentInClass = async (studentID: string, classID: string) => {
     try {
         await StudentSubjects.findOneAndUpdate({ student: studentID }, { $push: { class: classID } });
-        await Class.findByIdAndUpdate(classID, { $push: { students: studentID } });
+        await Class.findByIdAndUpdate(classID, { $push: { students: studentID }, $inc: { totalStudents: 1 } });
+        const classObj = await Class.findById(classID);
+        if (!classObj) {
+            return { message: 'Class not found.', httpCode: 404 };
+        }
+        const subjectID = classObj.subject;
+        const professorID = classObj.professor;
+        const block = classObj.block;
+        const subjectObj = await Subject.findById(subjectID);
+        const professorObj = await UserCredentials.findOne({ professorInformation: professorID });
+        const studentObj = await UserCredentials.findOne({ studentInformation: studentID });
+        if (!subjectObj) {
+            return { message: 'Subject not found.', httpCode: 404 };
+        }
+        if (!professorObj) {
+            return { message: 'Professor not found.', httpCode: 404 };
+        }
+        if (!studentObj) {
+            return { message: 'Student not found.', httpCode: 404 };
+        }
+        const subjectCode = subjectObj.subjectCode;
+        const professorUsername = professorObj.username;
+        const studentUsername = studentObj.username;
+        let str = `${subjectCode}${block}`;
+        let modifiedID = str.replace(/ /g, '-').replace(/-/g, '');
+        const channel = serverClient.channel('messaging', modifiedID);
+        await channel.addMembers([studentUsername]);
+        const personalChannel = serverClient.channel('messaging', {
+            members: [professorUsername, studentUsername],
+            created_by_id: 'phubreal',
+        });
+        await personalChannel.create();
         return { message: 'Student enrolled', httpCode: 200 };
     } catch (error) {
+        console.log(error);
         return { message: error, httpCode: 500 };
     }
 };
 
 export const checkStudentInClass = async (studentID: string, classID: string) => {
     try {
-        const classResult = (await Class.findById(classID))
-        let result = true
+        const classResult = await Class.findById(classID);
+        let result = true;
         const studentObjectID = await Student.findById(studentID);
-        if (classResult && studentObjectID){
+        if (classResult && studentObjectID) {
             result = classResult.students.includes(studentObjectID._id);
         }
         return result;
@@ -109,11 +162,78 @@ export const checkStudentInClass = async (studentID: string, classID: string) =>
 export const removeStudentInClass = async (studentID: string, classID: string) => {
     try {
         const result = await Class.updateOne({ _id: classID }, { $pull: { students: studentID } });
-        await StudentSubjects.updateOne({student: studentID},  { $pull: { class: classID } })
+        await StudentSubjects.updateOne({ student: studentID }, { $pull: { class: classID } });
         if (result.modifiedCount === 1) {
             return { message: 'Student removed from class successfully.', success: true };
         } else {
             return { message: 'Student not found in class.', success: false };
+        }
+    } catch (error) {
+        return { message: error, httpCode: 500 };
+    }
+};
+
+export const getProfessorID = async (query: string) => {
+    try {
+        const professor = await Professor.find({ $or: [{ username: { $regex: new RegExp(query, 'i') } }, { firstName: { $regex: new RegExp(query, 'i') } }, { middleName: { $regex: new RegExp(query, 'i') } }, { lastName: { $regex: new RegExp(query, 'i') } }] })
+            .populate('userCredentials')
+            .exec();
+        return { message: professor, httpCode: 200 };
+    } catch (error) {
+        return { message: error, httpCode: 500 };
+    }
+};
+export const getSubjectID = async (query: string) => {
+    try {
+        const subject = await Subject.find({ $or: [{ subjectCode: { $regex: new RegExp(query, 'i') } }, { subjectDescription: { $regex: new RegExp(query, 'i') } }] });
+
+        return { message: subject, httpCode: 200 };
+    } catch (error) {
+        return { message: error, httpCode: 500 };
+    }
+};
+
+export const getStudentID = async (query: string) => {
+    try {
+        const student = await Student.find({ $or: [{ username: { $regex: new RegExp(query, 'i') } }, { firstName: { $regex: new RegExp(query, 'i') } }, { middleName: { $regex: new RegExp(query, 'i') } }, { lastName: { $regex: new RegExp(query, 'i') } }] })
+            .populate('userCredentials')
+            .exec();
+        return { message: student, httpCode: 200 };
+    } catch (error) {
+        return { message: error, httpCode: 500 };
+    }
+};
+export const getClassID = async (query: string) => {
+    try {
+        // const classID = await Class.find({
+        //     $or: [{ 'professor.firstName': { $regex: new RegExp(query, 'i') } }, { 'professor.middleName': { $regex: new RegExp(query, 'i') } }, { 'professor.lastName': { $regex: new RegExp(query, 'i') } }, { 'subject.subjectDescription': { $regex: new RegExp(query, 'i') } }, { 'subject.subjectCode': { $regex: new RegExp(query, 'i') } }, { 'block': { $regex: new RegExp(query, 'i') } }],
+        // })
+        //     .populate('professor')
+        //     .populate('subject');
+
+        const regex = new RegExp(query, 'i');
+
+        const professors = await Professor.find({
+            $or: [{ 'firstName': { $regex: regex } }, { 'middleName': { $regex: regex } }, { 'lastName': { $regex: regex } }],
+        });
+        const subjects = await Subject.find({
+            $or: [{ 'subjectDescription': { $regex: regex } }, { 'subjectCode': { $regex: regex } }],
+        });
+
+        const q: any = {};
+
+        if (professors.length > 0) {
+            q['professor'] = { $in: professors.map((prof) => prof._id) };
+        }
+
+        if (subjects.length > 0) {
+            q['subject'] = { $in: subjects.map((sub) => sub._id) };
+        }
+        var classID = await Class.find(q).populate('professor').populate('subject');
+        if (Object.keys(q).length === 0) {
+            return { message: 'No class found.', httpCode: 404 };
+        } else {
+            return { message: classID, httpCode: 200 };
         }
     } catch (error) {
         return { message: error, httpCode: 500 };

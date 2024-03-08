@@ -33,7 +33,8 @@ const studentCheckSubmissionSchema = new mongoose_1.Schema({
     },
     attachment: [
         {
-            type: String,
+            type: mongoose_1.Schema.Types.ObjectId,
+            ref: 'Attachement',
         },
     ],
     score: {
@@ -94,6 +95,11 @@ const studentSubjectsSchema = new mongoose_1.Schema({
         ref: 'Student',
         default: null,
     },
+    schoolYear: {
+        type: String,
+        required: [true, 'Please enter the school year.'],
+        default: '',
+    },
     class: [
         {
             type: mongoose_1.Schema.Types.ObjectId,
@@ -122,5 +128,7 @@ const studentSubjectsSchema = new mongoose_1.Schema({
             default: null,
         },
     ],
+}, {
+    timestamps: true,
 });
 exports.StudentSubjects = mongoose_1.default.model('StudentSubjects', studentSubjectsSchema);

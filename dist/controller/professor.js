@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteConnectController = exports.deleteAllConnectController = exports.deleteCoachController = exports.deleteAllCoachController = exports.deleteCheckController = exports.deleteAllCheckController = exports.addConnectController = exports.addCoachController = exports.addCheckController = exports.addAnnouncementController = exports.getConnectTaskSubmissionController = exports.getCheckTaskSubmissionController = exports.getConnectTaskController = exports.getCheckTaskController = exports.getCoachTaskController = exports.getConnectController = exports.getCheckController = exports.getCoachController = exports.getClassController = void 0;
+exports.deleteConnectController = exports.deleteAllConnectController = exports.deleteCoachController = exports.deleteAllCoachController = exports.deleteCheckController = exports.deleteAllCheckController = exports.addConnectController = exports.addCoachController = exports.addCheckController = exports.addAnnouncementController = exports.getConnectTaskSubmissionController = exports.scoreStudentsCheckController = exports.scoreStudentsConnectController = exports.getCheckTaskSubmissionController = exports.editHighScoreCheckController = exports.editHighScoreConnectController = exports.getConnectTaskController = exports.getCheckTaskController = exports.getCoachTaskController = exports.getConnectController = exports.getCheckController = exports.getCoachController = exports.getClassStatisticsController = exports.getClassController = void 0;
 const professor_1 = require("../services/professor");
 const getClassController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -26,6 +26,21 @@ const getClassController = (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
 });
 exports.getClassController = getClassController;
+const getClassStatisticsController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const classID = req.query.classID;
+        if (classID) {
+            let result;
+            result = yield (0, professor_1.getClassStatistics)(classID);
+            return res.status(200).json({ 'message': result });
+        }
+        return res.status(401).json({ 'message': 'ClassID not found' });
+    }
+    catch (_b) {
+        res.status(500).json({ 'message': 'Internal Server Error' });
+    }
+});
+exports.getClassStatisticsController = getClassStatisticsController;
 const getCoachController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const classID = req.query.classID;
@@ -36,7 +51,7 @@ const getCoachController = (req, res) => __awaiter(void 0, void 0, void 0, funct
         }
         return res.status(401).json({ 'message': 'Class not found' });
     }
-    catch (_b) {
+    catch (_c) {
         res.status(500).json({ 'message': 'Internal Server Error' });
     }
 });
@@ -51,7 +66,7 @@ const getCheckController = (req, res) => __awaiter(void 0, void 0, void 0, funct
         }
         return res.status(401).json({ 'message': 'Class not found' });
     }
-    catch (_c) {
+    catch (_d) {
         res.status(500).json({ 'message': 'Internal Server Error' });
     }
 });
@@ -66,7 +81,7 @@ const getConnectController = (req, res) => __awaiter(void 0, void 0, void 0, fun
         }
         return res.status(401).json({ 'message': 'Class not found' });
     }
-    catch (_d) {
+    catch (_e) {
         res.status(500).json({ 'message': 'Internal Server Error' });
     }
 });
@@ -81,7 +96,7 @@ const getCoachTaskController = (req, res) => __awaiter(void 0, void 0, void 0, f
         }
         return res.status(401).json({ 'message': 'Class not found' });
     }
-    catch (_e) {
+    catch (_f) {
         res.status(500).json({ 'message': 'Internal Server Error' });
     }
 });
@@ -96,7 +111,7 @@ const getCheckTaskController = (req, res) => __awaiter(void 0, void 0, void 0, f
         }
         return res.status(401).json({ 'message': 'Class not found' });
     }
-    catch (_f) {
+    catch (_g) {
         res.status(500).json({ 'message': 'Internal Server Error' });
     }
 });
@@ -111,34 +126,41 @@ const getConnectTaskController = (req, res) => __awaiter(void 0, void 0, void 0,
         }
         return res.status(401).json({ 'message': 'Class not found' });
     }
-    catch (_g) {
-        res.status(500).json({ 'message': 'Internal Server Error' });
-    }
-});
-exports.getConnectTaskController = getConnectTaskController;
-const getCheckTaskSubmissionController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const classID = req.query.classID;
-        const taskID = req.query.taskID;
-        if (classID) {
-            let result;
-            result = yield (0, professor_1.getCheckTaskSubmission)(classID, taskID);
-            return res.status(200).json({ 'message': result });
-        }
-        return res.status(401).json({ 'message': 'Class not found' });
-    }
     catch (_h) {
         res.status(500).json({ 'message': 'Internal Server Error' });
     }
 });
-exports.getCheckTaskSubmissionController = getCheckTaskSubmissionController;
-const getConnectTaskSubmissionController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.getConnectTaskController = getConnectTaskController;
+const editHighScoreConnectController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const classID = req.query.classID;
+        const { taskID, editedScore } = req.body;
+        const editedScoreInt = parseInt(editedScore, 10);
+        const result = yield (0, professor_1.editHighScoreConnect)(taskID, editedScoreInt);
+        return res.status(result.httpCode).json({ 'message': result.message });
+    }
+    catch (error) {
+        return res.status(500).json({ 'message': 'Internal Server Error' });
+    }
+});
+exports.editHighScoreConnectController = editHighScoreConnectController;
+const editHighScoreCheckController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { taskID, editedScore } = req.body;
+        const editedScoreInt = parseInt(editedScore, 10);
+        const result = yield (0, professor_1.editHighScoreCheck)(taskID, editedScoreInt);
+        return res.status(result.httpCode).json({ 'message': result.message });
+    }
+    catch (error) {
+        return res.status(500).json({ 'message': 'Internal Server Error' });
+    }
+});
+exports.editHighScoreCheckController = editHighScoreCheckController;
+const getCheckTaskSubmissionController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
         const taskID = req.query.taskID;
-        if (classID) {
+        if (taskID) {
             let result;
-            result = yield (0, professor_1.getConnectTaskSubmission)(classID, taskID);
+            result = yield (0, professor_1.getCheckTaskSubmission)(taskID);
             return res.status(200).json({ 'message': result });
         }
         return res.status(401).json({ 'message': 'Class not found' });
@@ -147,9 +169,46 @@ const getConnectTaskSubmissionController = (req, res) => __awaiter(void 0, void 
         res.status(500).json({ 'message': 'Internal Server Error' });
     }
 });
+exports.getCheckTaskSubmissionController = getCheckTaskSubmissionController;
+const scoreStudentsConnectController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { data, taskID } = req.body;
+        const result = yield (0, professor_1.scoreStudentsConnect)(JSON.parse(data), taskID);
+        return res.status(result.httpCode).json({ 'message': result.message });
+    }
+    catch (error) {
+        return res.status(500).json({ 'message': 'Internal Server Error' });
+    }
+});
+exports.scoreStudentsConnectController = scoreStudentsConnectController;
+const scoreStudentsCheckController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { data, taskID } = req.body;
+        const result = yield (0, professor_1.scoreStudentsCheck)(JSON.parse(data), taskID);
+        return res.status(result.httpCode).json({ 'message': result.message });
+    }
+    catch (error) {
+        return res.status(500).json({ 'message': 'Internal Server Error' });
+    }
+});
+exports.scoreStudentsCheckController = scoreStudentsCheckController;
+const getConnectTaskSubmissionController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const taskID = req.query.taskID;
+        if (taskID) {
+            let result;
+            result = yield (0, professor_1.getConnectTaskSubmission)(taskID);
+            return res.status(200).json({ 'message': result });
+        }
+        return res.status(401).json({ 'message': 'Class not found' });
+    }
+    catch (_k) {
+        res.status(500).json({ 'message': 'Internal Server Error' });
+    }
+});
 exports.getConnectTaskSubmissionController = getConnectTaskSubmissionController;
 const addAnnouncementController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _k;
+    var _l;
     try {
         const { header, announcement, classID } = req.body;
         if (!header) {
@@ -158,7 +217,7 @@ const addAnnouncementController = (req, res) => __awaiter(void 0, void 0, void 0
         if (!announcement) {
             return res.status(400).json({ 'message': 'Add Description' });
         }
-        const professorID = (_k = req.user) === null || _k === void 0 ? void 0 : _k.userID;
+        const professorID = (_l = req.user) === null || _l === void 0 ? void 0 : _l.userID;
         const result = yield (0, professor_1.addAnnouncement)(header, announcement, professorID, classID);
         return res.status(result.httpCode).json({ 'message': result.message });
     }
@@ -170,9 +229,9 @@ exports.addAnnouncementController = addAnnouncementController;
 // TODO: add delete and required checker
 const addCheckController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { classID, postTitle, postDescription, dueDate } = req.body;
+        const { classID, postTitle, postDescription, dueDate, typeOfCheck } = req.body;
         //@ts-ignore
-        const result = yield (0, professor_1.addCheck)(classID, postTitle, postDescription, dueDate, req.files);
+        const result = yield (0, professor_1.addCheck)(classID, postTitle, postDescription, dueDate, typeOfCheck, req.files);
         return res.status(result.httpCode).json({ 'message': result.message });
     }
     catch (error) {
@@ -195,7 +254,6 @@ exports.addCoachController = addCoachController;
 const addConnectController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { classID, postTitle, postDescription, dueDate, choices } = req.body;
-        console.log(classID);
         if (choices) {
             let choicesArr = JSON.parse(choices);
             const result = yield (0, professor_1.addConnect)(classID, postTitle, postDescription, dueDate, choicesArr);

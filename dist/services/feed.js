@@ -25,7 +25,7 @@ const getAllStudentAnouncement = (id) => __awaiter(void 0, void 0, void 0, funct
             },
         })
             .exec();
-        for (const classObj of (_a = studentResult === null || studentResult === void 0 ? void 0 : studentResult.studentSubjects) === null || _a === void 0 ? void 0 : _a.class) {
+        for (const classObj of (_a = studentResult === null || studentResult === void 0 ? void 0 : studentResult.studentSubjects[0]) === null || _a === void 0 ? void 0 : _a.class) {
             announcementID.push(...classObj.announcement);
             const professorIDString = classObj.professor.toString();
             if (!professorID.includes(professorIDString)) {
@@ -34,7 +34,7 @@ const getAllStudentAnouncement = (id) => __awaiter(void 0, void 0, void 0, funct
         }
         for (const professor of professorID) {
             const professorResult = yield user_1.Professor.findOne({ _id: professor }).populate('professorHandledClass');
-            announcementID.push(...(professorResult === null || professorResult === void 0 ? void 0 : professorResult.professorHandledClass).announcement);
+            announcementID.push(...(professorResult === null || professorResult === void 0 ? void 0 : professorResult.professorHandledClass[0]).announcement);
         }
         const result = yield announcement_1.Announcement.find({ _id: { $in: announcementID } })
             .populate('professor')

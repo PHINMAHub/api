@@ -1,11 +1,13 @@
 import express, { Express, Request, Response } from 'express';
 import { Professor } from '../models/user';
 import { Announcement } from '../models/classModel/announcement';
-import { Check, Class, Coach, Connect, ConnectChoices } from '../models/classModel/class';
+import { Attachement, Check, Class, Coach, Connect, ConnectChoices } from '../models/classModel/class';
 import { ProfessorHandledClass } from '../models/classModel/professorClass';
 import { addTaskNotification } from './notification';
 import { StudentCheckSubmission, StudentConnectSubmission } from '../models/classModel/studentClass';
 
+import { getStorage, ref, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
+import { storage } from './upload';
 // export const findAllProfessor = async (req: Request, res: Response) => {
 //     try {
 //         const professors = await Professor.find({});
@@ -82,17 +84,41 @@ export const getClass = async (id: string) => {
                 },
             })
             .exec();
-        for (const classObj of (professorsClass?.professorHandledClass as any)?.class) {
+        for (const classObj of (professorsClass?.professorHandledClass[0] as any)?.class) {
             result.push(classObj);
         }
         return result;
     } catch (error) {
-        return { 'message': 'No Class' };
+        return { 'message': ['No Class'] };
+    }
+};
+export const getClassStatistics = async (classID: string) => {
+    try {
+        const result: string[] = [];
+        const professorsClass = await Class.findById(classID)
+            .populate({
+                path: 'students',
+                populate: {
+                    path: 'studentSubjects',
+                    populate: [
+                        { path: 'studentCheckSubmission', populate: { path: 'task' } },
+                        { path: 'studentConnectSubmission', populate: { path: 'task' } },
+                    ],
+                },
+            })
+            .populate('connect')
+            .populate('check');
+        // for (const classObj of (professorsClass?.professorHandledClass[0] as any)?.class) {
+        //     result.push(classObj);
+        // }
+        return professorsClass;
+    } catch (error) {
+        return { 'message': ['No Class'] };
     }
 };
 export const getCoach = async (classID: string) => {
     try {
-        const result = await Coach.find({ class: classID });
+        const result = await Coach.find({ class: classID }).sort({ createdAt: -1 });
         return result;
     } catch (error) {
         return { 'message': 'No Coach' };
@@ -100,7 +126,7 @@ export const getCoach = async (classID: string) => {
 };
 export const getCheck = async (classID: string) => {
     try {
-        const result = await Check.find({ class: classID });
+        const result = await Check.find({ class: classID }).sort({ createdAt: -1 });
         return result;
     } catch (error) {
         return { 'message': 'No Check' };
@@ -108,7 +134,7 @@ export const getCheck = async (classID: string) => {
 };
 export const getConnect = async (classID: string) => {
     try {
-        const result = await Connect.find({ class: classID });
+        const result = await Connect.find({ class: classID }).sort({ createdAt: -1 });
         return result;
     } catch (error) {
         return { 'message': 'No Connect' };
@@ -116,7 +142,7 @@ export const getConnect = async (classID: string) => {
 };
 export const getCoachTask = async (classID: string) => {
     try {
-        const result = await Coach.findById(classID);
+        const result = await Coach.findById(classID).populate('attachment').exec();
         return result;
     } catch (error) {
         return { 'message': 'No Coach' };
@@ -124,7 +150,7 @@ export const getCoachTask = async (classID: string) => {
 };
 export const getCheckTask = async (classID: string) => {
     try {
-        const result = await Check.findById(classID);
+        const result = await Check.findById(classID).populate('attachment').exec();
         return result;
     } catch (error) {
         return { 'message': 'No Check' };
@@ -132,28 +158,50 @@ export const getCheckTask = async (classID: string) => {
 };
 export const getConnectTask = async (classID: string) => {
     try {
-        const result = await Connect.findById(classID);
+        const result = await Connect.findById(classID).populate('postChoices').populate('class').exec();
         return result;
     } catch (error) {
         return { 'message': 'No Connect' };
     }
 };
-export const getCheckTaskSubmission = async (classID: string, taskID: string) => {
+export const editHighScoreConnect = async (taskID: string, editedScoreInt: number) => {
+    try {
+        const connectTask = await Connect.findOneAndUpdate({ _id: taskID }, { $set: { highestPossibleScore: editedScoreInt } }, { new: true });
+        return { message: 'Task high score updated', httpCode: 200 };
+    } catch (error: any) {
+        return { message: error.message, httpCode: 500 };
+    }
+};
+export const editHighScoreCheck = async (taskID: string, editedScoreInt: number) => {
+    try {
+        const connectTask = await Check.findOneAndUpdate({ _id: taskID }, { $set: { highestPossibleScore: editedScoreInt } }, { new: true });
+        return { message: 'Task high score updated', httpCode: 200 };
+    } catch (error: any) {
+        return { message: error.message, httpCode: 500 };
+    }
+};
+
+export const getCheckTaskSubmission = async (taskID: string) => {
     try {
         const studentTurnedIn = [],
             studentGraded = [],
             studentAssigned = [];
-        const students = await Class.findById(classID, 'students');
+        const task = await Check.findById(taskID);
+        if (!task) {
+            return 'Class not found.';
+        }
+        const classID = task.class;
+        const students = await Class.findById(classID, 'students').populate('students');
         for (const student of (students as any)?.students) {
-            const studentSubmission = await StudentCheckSubmission.findOne({ student, task: taskID });
+            const studentSubmission = await StudentCheckSubmission.findOne({ student, task: taskID }).populate('attachment').populate('student');
             if (studentSubmission) {
                 if (studentSubmission.score) {
-                    studentGraded.push(student);
+                    studentGraded.push([student, studentSubmission]);
                 } else {
-                    studentTurnedIn.push(student);
+                    studentTurnedIn.push([student, studentSubmission]);
                 }
             } else {
-                studentAssigned.push(student);
+                studentAssigned.push([student]);
             }
         }
         return { studentTurnedIn, studentGraded, studentAssigned };
@@ -161,22 +209,48 @@ export const getCheckTaskSubmission = async (classID: string, taskID: string) =>
         return { 'message': 'No Check' };
     }
 };
-export const getConnectTaskSubmission = async (classID: string, taskID: string) => {
+export const scoreStudentsConnect = async (data: object, task: string) => {
+    try {
+        Object.entries(data).forEach(async ([student, score]) => {
+            let result = await StudentConnectSubmission.findOneAndUpdate({ student, task }, { score }, { upsert: true, new: true });
+            console.log(result);
+        });
+        return { message: 'Students score updated', httpCode: 200 };
+    } catch (error: any) {
+        return { message: error.message, httpCode: 500 };
+    }
+};
+export const scoreStudentsCheck = async (data: object, task: string) => {
+    try {
+        Object.entries(data).forEach(async ([student, score]) => {
+            await StudentCheckSubmission.findOneAndUpdate({ student, task }, { score }, { upsert: true, new: true });
+        });
+        return { message: 'Students score updated', httpCode: 200 };
+    } catch (error: any) {
+        return { message: error.message, httpCode: 500 };
+    }
+};
+export const getConnectTaskSubmission = async (taskID: string) => {
     try {
         const studentTurnedIn = [],
             studentGraded = [],
             studentAssigned = [];
-        const students = await Class.findById(classID, 'students');
+        const task = await Connect.findById(taskID);
+        if (!task) {
+            return 'Class not found.';
+        }
+        const classID = task.class;
+        const students = await Class.findById(classID, 'students').populate('students');
         for (const student of (students as any)?.students) {
-            const studentSubmission = await StudentConnectSubmission.findOne({ student, task: taskID });
+            const studentSubmission = await StudentConnectSubmission.findOne({ student, task: taskID }).populate('answer').populate('student');
             if (studentSubmission) {
                 if (studentSubmission.score) {
-                    studentGraded.push(student);
+                    studentGraded.push([student, studentSubmission]);
                 } else {
-                    studentTurnedIn.push(student);
+                    studentTurnedIn.push([student, studentSubmission]);
                 }
             } else {
-                studentAssigned.push(student);
+                studentAssigned.push([student]);
             }
         }
         return { studentTurnedIn, studentGraded, studentAssigned };
@@ -221,17 +295,27 @@ export const deleteAnnouncement = async (req: Request, res: Response) => {
     }
 };
 
-export const addCheck = async (classID: string, postTitle: string, postDescription: string, dueDate: Date, files: UploadedFile[] | undefined) => {
+export const addCheck = async (classID: string, postTitle: string, postDescription: string, dueDate: Date, typeOfCheck: string, files: UploadedFile[] | undefined) => {
     try {
         let newCheck = await new Check({
             postTitle,
             postDescription,
             dueDate,
+            typeOfCheck,
         }).save();
         if (files) {
             for (const file of files) {
-                const imagePath = file.path;
-                newCheck.attachment.push(imagePath);
+                const storageRef = ref(storage, `files/${file.originalname}${new Date()}`);
+
+                const metadata = {
+                    contentType: file.mimetype,
+                };
+
+                const snapshot = await uploadBytesResumable(storageRef, file.buffer, metadata);
+                const downloadURL = await getDownloadURL(snapshot.ref);
+                const fileType = file.mimetype.startsWith('image/') ? 'image' : 'docs';
+                let newAttachment = await new Attachement({ url: downloadURL, type: fileType }).save();
+                newCheck.attachment.push(newAttachment._id);
             }
             await newCheck.save();
         }
@@ -290,8 +374,17 @@ export const addCoach = async (classID: string, postTitle: string, postDescripti
         }).save();
         if (files) {
             for (const file of files) {
-                const imagePath = file.path;
-                newCoach.attachment.push(imagePath);
+                const storageRef = ref(storage, `files/${file.originalname}${new Date()}`);
+
+                const metadata = {
+                    contentType: file.mimetype,
+                };
+
+                const snapshot = await uploadBytesResumable(storageRef, file.buffer, metadata);
+                const downloadURL = await getDownloadURL(snapshot.ref);
+                const fileType = file.mimetype.startsWith('image/') ? 'image' : 'docs';
+                let newAttachment = await new Attachement({ url: downloadURL, type: fileType }).save();
+                newCoach.attachment.push(newAttachment._id);
             }
             await newCoach.save();
         }
@@ -412,4 +505,5 @@ interface UploadedFile {
     filename: string;
     path: string;
     size: number;
+    buffer: Buffer;
 }

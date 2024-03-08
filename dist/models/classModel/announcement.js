@@ -31,7 +31,7 @@ const announcementSchema = new mongoose_1.Schema({
         required: [true, 'Please enter your header.'],
         validate: {
             validator: function (input) {
-                return input.length <= 15;
+                return input.length <= 30;
             },
             message: (props) => `${props.value} exceeds the maximum length of 15 characters.`,
         },

@@ -12,11 +12,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.registerUserController = exports.loginUserController = exports.checkCurrentUser = void 0;
+exports.registerUserController = exports.loginUserController = exports.checkCurrentUser = exports.serverClient = void 0;
 const entry_1 = require("../services/entry");
 const http_response_1 = require("../models/http-response");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const stream_chat_1 = require("stream-chat");
+exports.serverClient = stream_chat_1.StreamChat.getInstance('z2a8ej6rey5a', 'd6fsk58vwddreersnpagzaja53xz789wavb6au2nn26c25bje9xqzu2kb87x8cf7');
 // Check Current User
 const checkCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -46,8 +47,7 @@ const loginUserController = (req, res) => __awaiter(void 0, void 0, void 0, func
                     [userID, userType, userFullName, username] = userData;
                     const user = { userID, userName: userIdentifier, userType };
                     const accessToken = jsonwebtoken_1.default.sign(user, accessTokenSecret);
-                    const serverClient = stream_chat_1.StreamChat.getInstance('2sgdxg7zqddx', 'c4vvskc6wjyduppj266hvhwfn7rqh7ctwhshzgr95n4qvw7q7mjkmsmzyd6826d4');
-                    const chatToken = serverClient.createToken(username);
+                    const chatToken = exports.serverClient.createToken(username);
                     const userTypeHash = userType === 'admin' ? '3aDfR9oPq2sW5tZyX8vBu1mNc7LkIj6Hg4TfGhJdSe4RdFgBhNjVkLo0iUyHnJm' : userType === 'student' ? 'E2jF8sG5dH9tY3kL4zX7pQ6wR1oV0mCqB6nI8bT7yU5iA3gD2fS4hJ9uMlKoP1e' : 'r9LsT6kQ3jWfZ1pY4xN7hM2cV8gB5dI0eJ4uF2oD3iG5vX6mC1aS7tR9yU3lK8w';
                     loginUpdate = Object.assign(Object.assign({}, loginUpdate), { accessToken: accessToken, userType: userTypeHash, chatToken, userFullName, username });
                 }
@@ -89,15 +89,20 @@ const checkEveryInputForLogin = (userIdentifier, password, userIdentifierType) =
 });
 // Registrations
 const registerUserController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { firstName, middleName, lastName, personalEmail, schoolEmail, personalNumber, schoolNumber, address, birthday, studentID, course, section, enrolled, username, password, userType, active, department } = req.body;
-    const checkerForInput = yield checkEveryInputForSignup(username, personalEmail, schoolEmail, password);
-    if (checkerForInput.message['message'] === 'success') {
-        const data = yield (0, entry_1.registerUsertoDatabase)(firstName, middleName, lastName, username, personalEmail, schoolEmail, personalNumber, schoolNumber, address, birthday, password, userType, enrolled, course, section, studentID, department, active);
-        res.status(data.httpCode).json({ message: data.message });
+    try {
+        const { firstName, middleName, lastName, personalEmail, schoolEmail, personalNumber, schoolNumber, address, birthday, studentID, course, section, enrolled, username, password, userType, active, department, levelOfEducation, schoolYear, summerClass, year } = req.body;
+        const checkerForInput = yield checkEveryInputForSignup(username, personalEmail, schoolEmail, password);
+        if (checkerForInput.message['message'] === 'success') {
+            const data = yield (0, entry_1.registerUsertoDatabase)(firstName, middleName, lastName, username, personalEmail, schoolEmail, personalNumber, schoolNumber, address, birthday, password, userType, enrolled, course, section, studentID, department, active, levelOfEducation, schoolYear, summerClass, year);
+            res.status(data.httpCode).json({ message: data.message });
+            return;
+        }
+        res.status(checkerForInput.code).json(checkerForInput.message);
         return;
     }
-    res.status(checkerForInput.code).json(checkerForInput.message);
-    return;
+    catch (error) {
+        res.status(500).json({ message: 'Internal server error.' });
+    }
 });
 exports.registerUserController = registerUserController;
 const checkEveryInputForSignup = (username, personalEmail, schoolEmail, password) => __awaiter(void 0, void 0, void 0, function* () {
@@ -116,10 +121,10 @@ const checkEveryInputForSignup = (username, personalEmail, schoolEmail, password
     if (!(yield (0, entry_1.checkUsernameAvailability)(username))) {
         return new http_response_1.HttpResponse({ 'message': 'This username is being used.' }, 200);
     }
-    if (!(yield (0, entry_1.checkEmailAvailability)(personalEmail))) {
+    if (!(yield (0, entry_1.checkPersonalEmailAvailability)(personalEmail))) {
         return new http_response_1.HttpResponse({ 'message': 'This personal email address is being used.' }, 200);
     }
-    if (!(yield (0, entry_1.checkEmailAvailability)(schoolEmail))) {
+    if (!(yield (0, entry_1.checkSchoolEmailAvailability)(schoolEmail))) {
         return new http_response_1.HttpResponse({ 'message': 'This school email address is being used.' }, 200);
     }
     return new http_response_1.HttpResponse({ 'message': 'success' }, 200);

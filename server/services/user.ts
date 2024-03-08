@@ -32,6 +32,7 @@ export const findAllUsers = async (req: Request, res: Response) => {
             })
             .exec();
         const admin = await Admin.find({}).populate('userCredentials').exec();
+        const userCredentials = await UserCredentials.find({});
         const announcement = await Announcement.find({});
         const check = await Check.find({});
         const connect = await Connect.find({});
@@ -47,7 +48,7 @@ export const findAllUsers = async (req: Request, res: Response) => {
         const message = await Message.find({});
         const choices = await ConnectChoices.find({});
 
-        res.status(200).json({ admin, students, professor, announcement, check, connect, coach, classes, professorHandledClass, studentConnectSubmission, studentCheckSubmission, studentCoachView, studentSubjects, subject, inbox, message, choices });
+        res.status(200).json({ userCredentials, admin, students, professor, announcement, check, connect, coach, classes, professorHandledClass, studentConnectSubmission, studentCheckSubmission, studentCoachView, studentSubjects, subject, inbox, message, choices });
     } catch (error) {
         res.status(500).json('No Students found');
     }
@@ -180,5 +181,24 @@ export const joinClass = async (user: User, socket: any) => {
         return { 'message': 'No user found', 'httpCode': 500 };
     } catch (error) {
         return { 'message': 'No user found', 'httpCode': 500 };
+    }
+};
+export const getClassTask = async (classID: string) => {
+    try {
+        const resultCoach = await Coach.find({ class: classID }).sort({ createdAt: -1 });
+        const resultCheck = await Check.find({ class: classID }).sort({ createdAt: -1 });
+        const resultConnect = await Connect.find({ class: classID }).sort({ createdAt: -1 });
+        const result = [...resultCheck, ...resultCoach, ...resultConnect];
+        return result;
+    } catch (error) {
+        return { 'message': 'No Coach' };
+    }
+};
+export const getClassPeople = async (classID: string) => {
+    try {
+        const result = await Class.findById(classID).populate('students').populate('professor');
+        return result;
+    } catch (error) {
+        return { 'message': 'No Coach' };
     }
 };

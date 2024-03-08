@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.submitConnectController = exports.submitCheckController = exports.getCoachController = exports.getCheckController = exports.getConnectController = exports.getAnnouncementController = void 0;
+exports.getConnectTaskController = exports.getCheckTaskController = exports.submitConnectController = exports.unSubmitCheckController = exports.submitCheckController = exports.getCoachController = exports.getCheckController = exports.getConnectController = exports.getAnnouncementController = void 0;
 const student_1 = require("../services/student");
 const getAnnouncementController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
@@ -60,9 +60,8 @@ const getCoachController = (req, res) => __awaiter(void 0, void 0, void 0, funct
 });
 exports.getCoachController = getCoachController;
 const submitCheckController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _e;
     try {
-        const userID = (_e = req.user) === null || _e === void 0 ? void 0 : _e.userID;
+        const { userID } = req.user || {};
         const { taskID } = req.body;
         //@ts-ignore
         const result = yield (0, student_1.submitCheck)(taskID, userID, req.files);
@@ -73,12 +72,24 @@ const submitCheckController = (req, res) => __awaiter(void 0, void 0, void 0, fu
     }
 });
 exports.submitCheckController = submitCheckController;
-const submitConnectController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _f;
+const unSubmitCheckController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const userID = (_f = req.user) === null || _f === void 0 ? void 0 : _f.userID;
-        const { taskID, answerID } = req.body;
-        const result = yield (0, student_1.submitConnect)(taskID, userID, answerID);
+        const { userID } = req.user || {};
+        const { taskID } = req.body;
+        const result = yield (0, student_1.unSubmitCheck)(taskID, userID);
+        return res.status(result.httpCode).json({ 'message': result.message });
+    }
+    catch (error) {
+        return res.status(500).json({ 'message': 'Internal Server Error' });
+    }
+});
+exports.unSubmitCheckController = unSubmitCheckController;
+const submitConnectController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _e;
+    try {
+        const userID = (_e = req.user) === null || _e === void 0 ? void 0 : _e.userID;
+        const { taskID, choiceID } = req.body;
+        const result = yield (0, student_1.submitConnect)(taskID, userID, choiceID);
         return res.status(result.httpCode).json({ 'message': result.message });
     }
     catch (error) {
@@ -86,3 +97,37 @@ const submitConnectController = (req, res) => __awaiter(void 0, void 0, void 0, 
     }
 });
 exports.submitConnectController = submitConnectController;
+const getCheckTaskController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _f;
+    try {
+        const userID = (_f = req.user) === null || _f === void 0 ? void 0 : _f.userID;
+        const taskID = req.query.taskID;
+        if (taskID) {
+            let result;
+            result = yield (0, student_1.getCheckTask)(taskID, userID);
+            return res.status(200).json({ 'message': result });
+        }
+        return res.status(401).json({ 'message': 'Class not found' });
+    }
+    catch (_g) {
+        res.status(500).json({ 'message': 'Internal Server Error' });
+    }
+});
+exports.getCheckTaskController = getCheckTaskController;
+const getConnectTaskController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _h;
+    try {
+        const userID = (_h = req.user) === null || _h === void 0 ? void 0 : _h.userID;
+        const taskID = req.query.taskID;
+        if (taskID) {
+            let result;
+            result = yield (0, student_1.getConnectTask)(taskID, userID);
+            return res.status(200).json({ 'message': result });
+        }
+        return res.status(401).json({ 'message': 'Class not found' });
+    }
+    catch (_j) {
+        res.status(500).json({ 'message': 'Internal Server Error' });
+    }
+});
+exports.getConnectTaskController = getConnectTaskController;

@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getUserNotificationController = exports.getUserSubjectsController = exports.getUserProfileController = void 0;
+exports.getClassPeopleController = exports.getClassTasksController = exports.getUserNotificationController = exports.getUserSubjectsController = exports.getUserProfileController = void 0;
 const user_1 = require("../services/user");
 const notification_1 = require("../services/notification");
 const getUserProfileController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -63,3 +63,33 @@ const getUserNotificationController = (req, res) => __awaiter(void 0, void 0, vo
     }
 });
 exports.getUserNotificationController = getUserNotificationController;
+const getClassTasksController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const classID = req.query.classID;
+        if (classID) {
+            let result;
+            result = yield (0, user_1.getClassTask)(classID);
+            return res.status(200).json({ 'message': result });
+        }
+        return res.status(401).json({ 'message': 'ClassID not found' });
+    }
+    catch (_a) {
+        res.status(500).json({ 'message': 'Internal Server Error' });
+    }
+});
+exports.getClassTasksController = getClassTasksController;
+const getClassPeopleController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const classID = req.query.classID;
+        if (classID) {
+            let result;
+            result = yield (0, user_1.getClassPeople)(classID);
+            return res.status(200).json({ 'message': result });
+        }
+        return res.status(401).json({ 'message': 'ClassID not found' });
+    }
+    catch (_b) {
+        res.status(500).json({ 'message': 'Internal Server Error' });
+    }
+});
+exports.getClassPeopleController = getClassPeopleController;
