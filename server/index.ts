@@ -24,7 +24,7 @@ const server = http.createServer(app);
 const port = 3000;
 
 const MONGODB_CONNECTION: any = process.env.MONGODB_CONNECTION;
-const ORIGIN_URL: any = process.env.ORIGIN_URL || ['https://client-72q1e2aab-dreamers-projects-82b45cfd.vercel.app', '*'];
+const ORIGIN_URL: any = process.env.ORIGIN_URL || ['https://client-one-chi-73.vercel.app', 'client-one-chi-73.vercel.app', 'client-1lj3mr9a9-dreamers-projects-82b45cfd.vercel.app', '*'];
 
 mongoose
     .connect(MONGODB_CONNECTION)
@@ -37,7 +37,7 @@ mongoose
 
 app.use(
     cors({
-        origin: '*',
+        origin: ORIGIN_URL,
         methods: '*',
         allowedHeaders: ['Content-Type', 'Authorization'],
         credentials: true,
@@ -71,7 +71,7 @@ server.listen(port, () => {
 
 export const io = new Server(server, {
     cors: {
-        origin: '*',
+        origin: ORIGIN_URL,
         methods: '*',
         allowedHeaders: ['Content-Type', 'Authorization'],
         credentials: true,
